@@ -55,6 +55,9 @@ class Phantom : public QObject
     Q_PROPERTY(bool cookiesEnabled READ areCookiesEnabled WRITE setCookiesEnabled)
     Q_PROPERTY(QVariantList cookies READ cookies WRITE setCookies)
     Q_PROPERTY(bool webdriverMode READ webdriverMode)
+/***** < ivan *****/
+    Q_PROPERTY(QString remoteLibraryPath READ remoteLibraryPath WRITE setRemoteLibraryPath)
+/***** ivan > *****/
 
 private:
     // Private constructor: the Phantom class is a singleton
@@ -100,11 +103,21 @@ public:
      * Create `child_process` module instance
      */
     Q_INVOKABLE QObject *_createChildProcess();
+/***** < ivan *****/
+    QString remoteLibraryPath() const;
+    void setRemoteLibraryPath(const QString &remoteLibraryPath);
+/***** ivan > *****/
 
 public slots:
     QObject *createCookieJar(const QString &filePath);
     QObject *createWebPage();
     QObject *createWebServer();
+/***** < ivan *****/
+    QObject *createAMQPClient();
+    QObject *createSQL();
+    QObject *createNet();
+    QVariantMap detectLanguage(const QString &text, bool isHtml = false);
+/***** ivan > *****/
     QObject *createFilesystem();
     QObject *createSystem();
     QObject *createCallback();

@@ -75,6 +75,9 @@ static const struct QCommandLineConfigEntry flags[] =
     { QCommandLine::Option, '\0', "webdriver-logfile", "File where to write the WebDriver's Log (default 'none') (NOTE: needs '--webdriver') ", QCommandLine::Optional },
     { QCommandLine::Option, '\0', "webdriver-loglevel", "WebDriver Logging Level: (supported: 'ERROR', 'WARN', 'INFO', 'DEBUG') (default 'INFO') (NOTE: needs '--webdriver') ", QCommandLine::Optional },
     { QCommandLine::Option, '\0', "webdriver-selenium-grid-hub", "URL to the Selenium Grid HUB: 'URL_TO_HUB' (default 'none') (NOTE: needs '--webdriver') ", QCommandLine::Optional },
+/***** < ivan *****/
+    { QCommandLine::Option, '\0', "remote-library-path", "URL to the remote library, e.g. '--remote-library=http://192.168.1.201/libs/%name%/appkey' ", QCommandLine::Optional },
+/***** ivan > *****/
     { QCommandLine::Param, '\0', "script", "Script", QCommandLine::Flags(QCommandLine::Optional|QCommandLine::ParameterFence)},
     { QCommandLine::Param, '\0', "argument", "Script argument", QCommandLine::OptionalMultiple },
     { QCommandLine::Switch, 'w', "wd", "Equivalent to '--webdriver' option above", QCommandLine::Optional },
@@ -536,6 +539,18 @@ QString Config::webdriverSeleniumGridHub() const
     return m_webdriverSeleniumGridHub;
 }
 
+/***** < ivan *****/
+void Config::setRemoteLibraryPath(const QString &remoteLibraryPath)
+{
+    m_remoteLibraryPath = remoteLibraryPath;
+}
+
+QString Config::remoteLibraryPath() const
+{
+    return m_remoteLibraryPath;
+}
+/***** ivan > *****/
+
 // private:
 void Config::resetToDefaults()
 {
@@ -594,6 +609,12 @@ void Config::resetToDefaults()
     m_webdriverLogFile = QString();
     m_webdriverLogLevel = "INFO";
     m_webdriverSeleniumGridHub = QString();
+/***** < ivan *****/
+    m_remoteLibraryPath = "";
+    //m_autoLoadImages = false;
+    m_ignoreSslErrors = true;
+    m_webSecurityEnabled = false;
+/***** ivan > *****/
 }
 
 void Config::setProxyAuthPass(const QString &value)
@@ -723,6 +744,11 @@ void Config::handleOption(const QString &option, const QVariant &value)
         setDebug(true);
         setRemoteDebugPort(value.toInt());
     }
+/***** < ivan *****/
+    if (option == "remote-library-path") {
+        setRemoteLibraryPath(value.toString());
+    }
+/***** ivan > *****/
 
     if (option == "proxy") {
         setProxy(value.toString());

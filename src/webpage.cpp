@@ -56,6 +56,16 @@
 #include <QImageWriter>
 #include <QUuid>
 
+
+/***** < ivan *****/
+#include <stdlib.h>
+#include <QList>
+#include <QWebHitTestResult>
+#include "terminal.h"
+#include <QNetworkInterface>
+#include <QFile>
+/***** ivan > *****/
+
 #include "phantom.h"
 #include "networkaccessmanager.h"
 #include "utils.h"
@@ -401,7 +411,14 @@ WebPage::WebPage(QObject *parent, const QUrl &baseUrl)
     connect(m_networkAccessManager, SIGNAL(resourceTimeout(QVariant)),
             SIGNAL(resourceTimeout(QVariant)));
 
-    m_customWebPage->setViewportSize(QSize(400, 300));
+/***** < ivan *****/
+    m_globalTimeout = 0;
+    m_globalTimeoutTimer.setSingleShot(true);
+    connect(&m_globalTimeoutTimer, SIGNAL(timeout()), SLOT(_globalTimeoutTestFunction()));
+    m_customWebPage->setViewportSize(QSize(800, 600));
+    m_waitTimeout = 5000;
+    m_waitInterval = 200;
+/***** ivan > *****/
 }
 
 WebPage::~WebPage()
@@ -437,6 +454,13 @@ void WebPage::setContent(const QString &content, const QString &baseUrl)
         m_mainFrame->setHtml(content, QUrl(baseUrl));
     }
 }
+
+/***** < ivan *****/
+void WebPage::setContentRaw(const QByteArray & data, const QString & mimeType, const QString & baseUrl)
+{
+    m_mainFrame->setContent(data, mimeType, QUrl(baseUrl));
+}
+/***** ivan > *****/
 
 
 void WebPage::setFrameContent(const QString &content)
@@ -1332,6 +1356,13 @@ QObject *WebPage::_getJsInterruptCallback()
     return m_callbacks->getJsInterruptCallback();
 }
 
+/***** < ivan *****/
+QObject *WebPage::_getFilterCallback()
+{
+    return m_networkAccessManager->requestsFilter;
+}
+/***** ivan > *****/
+
 void WebPage::sendEvent(const QString &type, const QVariant &arg1, const QVariant &arg2, const QString &mouseButton, const QVariant &modifierArg)
 {
     Qt::KeyboardModifiers keyboardModifiers(modifierArg.toInt());
@@ -1448,6 +1479,24 @@ void WebPage::sendEvent(const QString &type, const QVariant &arg1, const QVarian
         }
         return;
     }
+
+/***** < ivan *****/
+    if (eventType == "wheel") {
+        if (arg1.isValid() && arg2.isValid()) {
+            m_mousePos.setX(arg1.toInt());
+            m_mousePos.setY(arg2.toInt());
+        }
+        int delta = mouseButton.toInt();
+
+        // Prepare the Mouse event
+        qDebug() << "Wheel Event:" << m_mousePos << " - " << delta;
+        QWheelEvent  *event = new QWheelEvent (m_mousePos, delta, Qt::NoButton, keyboardModifiers);
+        // Post and process events
+        QApplication::postEvent(m_customWebPage, event);
+        QApplication::processEvents();
+        return;
+    }
+/***** ivan > *****/
 }
 
 QObjectList WebPage::pages() const
@@ -1634,5 +1683,176 @@ void WebPage::clearMemoryCache()
 {
     QWebSettings::clearMemoryCaches();
 }
+
+/***** < ivan *****/
+QString WebPage::resolveUrl(const QString &href) const
+{
+    return (!href.isEmpty()) ? m_mainFrame->baseUrl().resolved(QUrl(href)).toString() : QString();
+}
+
+void WebPage::_wait(int timeout)
+{
+    if (timeout > 0) {
+        qDebug() << "wait for" << timeout << "ms";
+        m_timer.start(timeout, timeout);
+    }
+}
+
+bool WebPage::waitForPage(int loadstart_timeout)
+{
+    if (loadstart_timeout > 0) {
+        qDebug() << "waiting for page to start loading" << loadstart_timeout << "ms";
+        connect(this, SIGNAL(loadStarted()), &m_timer, SLOT(done()));
+        m_timer.start(loadstart_timeout, loadstart_timeout);
+        disconnect(this, SIGNAL(loadStarted()), &m_timer, SLOT(done()));
+    }
+    else if (loadstart_timeout < 0) {
+        qDebug() << "waiting for page to start loading infinitely!";
+        connect(this, SIGNAL(loadStarted()), &m_loop, SLOT(quit()));
+        m_loop.exec();
+        disconnect(this, SIGNAL(loadStarted()), &m_loop, SLOT(quit()));
+    }
+    if (loading())
+    {
+        qDebug() << "waiting for page to finish loading";
+        connect(this, SIGNAL(loadFinished(const QString)), &m_loop, SLOT(quit()));
+        m_loop.exec();
+        disconnect(this, SIGNAL(loadFinished(const QString)), &m_loop, SLOT(quit()));
+        qDebug() << "done waiting for page";
+        return true;
+    }
+    else
+    {
+        qDebug() << "waiting for page - page is not loading";
+        return false;
+    }
+}
+
+bool WebPage::_waitForFunction(int timeout, int interval)
+{
+    if (timeout == -1) timeout = m_waitTimeout;
+    if (interval == -1) interval = m_waitInterval;
+    qDebug() << "wating for function with timeout" << timeout << "ms and interval" << interval << "ms";
+    
+    m_waitForTestFunctionResult = false;
+    emit _waitForTest(m_timer.counter()); // signaler should set sWaitForTestFunctionResult property as test result
+    qDebug() << "test result is:" << m_waitForTestFunctionResult;
+    if (m_waitForTestFunctionResult) {
+        return true;
+    }
+
+    connect(&m_timer, SIGNAL(test()), this, SLOT(_waitForTestFunction()));
+    bool result = m_timer.start(interval, timeout);
+    disconnect(&m_timer, SIGNAL(test()), this, SLOT(_waitForTestFunction()));
+
+    qDebug() << "done wating for function:" << result;
+
+    return result;
+}
+
+void WebPage::_waitForTestFunction()
+{
+    qDebug() << "emiting test function signal..." << m_timer.counter();
+    m_waitForTestFunctionResult = false;
+    emit _waitForTest(m_timer.counter()); // signaler should set sWaitForTestFunctionResult property as test result
+    qDebug() << "test result is:" << m_waitForTestFunctionResult;
+    if (m_waitForTestFunctionResult) {
+        m_timer.done();
+    }
+}
+
+bool WebPage::waitForTestFunctionResult() const
+{
+    return m_waitForTestFunctionResult;
+}
+
+void WebPage::setWaitForTestFunctionResult(bool value)
+{
+    m_waitForTestFunctionResult = value;
+}
+
+QWebElement WebPage::_one(const QString &selector) const
+{
+    return m_currentFrame->findFirstElement(selector);
+}
+
+int WebPage::historyLimit() const
+{
+    return m_customWebPage->history()->maximumItemCount();
+}
+
+void WebPage::setHistoryLimit(int limit)
+{
+    m_customWebPage->history()->setMaximumItemCount(limit);
+}
+
+int WebPage::historyIndex() const
+{
+    return m_customWebPage->history()->currentItemIndex();
+}
+
+int WebPage::historyCount() const
+{
+    return m_customWebPage->history()->count();
+}
+
+int WebPage::waitTimeout() const
+{
+    return m_waitTimeout;
+}
+
+void WebPage::setWaitTimeout(int timeout)
+{
+    m_waitTimeout = timeout;
+}
+
+int WebPage::waitInterval() const
+{
+    return m_waitInterval;
+}
+
+void WebPage::setWaitInterval(int interval)
+{
+    m_waitInterval = interval;
+}
+
+int WebPage::globalTimeout() const
+{
+    return m_globalTimeout / 1000;
+}
+
+void WebPage::setGlobalTimeout(int timeout)
+{
+    m_globalTimeout = timeout * 1000;
+    qDebug() << "Global timeout -" << m_globalTimeout;
+    if (m_globalTimeout == 0) {
+        qDebug() << "Global timeout stopped";
+        m_globalTimeoutTimer.stop();
+    }
+    else {
+        qDebug() << "Global timeout started";
+        m_globalTimeoutTimer.setInterval(m_globalTimeout);
+        m_globalTimeoutTimer.start();
+    }
+    //QTimer::singleShot(m_globalTimeout, this, SLOT(_globalTimeoutTestFunction()));
+}
+
+void WebPage::_globalTimeoutTestFunction()
+{
+    Terminal::instance()->cout(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " global timeout event");
+    Phantom::instance()->exit();
+}
+
+bool WebPage::abortAllRequests() const
+{
+    return m_networkAccessManager->abortAllRequests;
+}
+
+void WebPage::setAbortAllRequests(bool abortAllRequests)
+{
+    m_networkAccessManager->abortAllRequests = abortAllRequests;
+}
+
+/***** ivan > *****/
 
 #include "webpage.moc"

@@ -50,6 +50,13 @@
 #include "callback.h"
 #include "cookiejar.h"
 #include "childprocess.h"
+/***** < ivan *****/
+#include "qamqp/qamqpclient.h"
+#include "sql.h"
+#include "net.h"
+#include "cld2/public/compact_lang_det.h"
+/***** ivan > *****/
+
 
 static Phantom *phantomInstance = NULL;
 
@@ -196,6 +203,7 @@ bool Phantom::execute()
     if (m_config.isWebdriverMode()) {                                   // Remote WebDriver mode requested
         qDebug() << "Phantom - execute: Starting Remote WebDriver mode";
 
+        Terminal::instance()->cout("PhantomJS is launching GhostDriver...");
         if (!Utils::injectJsInFrame(":/ghostdriver/main.js", QString(), m_scriptFileEnc, QDir::currentPath(), m_page->mainFrame(), true)) {
             m_returnValue = -1;
             return false;
@@ -249,6 +257,18 @@ void Phantom::setLibraryPath(const QString &libraryPath)
 {
     m_page->setLibraryPath(libraryPath);
 }
+
+/***** < ivan *****/
+QString Phantom::remoteLibraryPath() const
+{
+    return m_config.remoteLibraryPath();
+}
+
+void Phantom::setRemoteLibraryPath(const QString &remoteLibraryPath)
+{
+    m_config.setRemoteLibraryPath(remoteLibraryPath);
+}
+/***** ivan > *****/
 
 QVariantMap Phantom::version() const
 {
@@ -414,6 +434,52 @@ void Phantom::setProxy(const QString &ip, const qint64 &port, const QString &pro
     }
 }
 
+/***** < ivan *****/
+
+QObject* Phantom::createAMQPClient()
+{
+    QAmqpClient *client = new QAmqpClient(this);
+    return client;
+}
+
+QObject* Phantom::createSQL()
+{
+    SQL *sql = new SQL(this);
+    return sql;
+}
+
+QObject* Phantom::createNet()
+{
+    Net *net = new Net(this);
+    return net;
+}
+
+QVariantMap Phantom::detectLanguage(const QString &text, bool isHtml)
+{
+    CLD2::Language language3[3];
+    int percent3[3];
+    int textBytes[1];
+    bool isReliable[1];
+
+    CLD2::Language language = CLD2::ExtDetectLanguageSummary(
+        text.toUtf8().constData(),
+        text.length(),
+        !isHtml,
+        language3,
+        percent3,
+        textBytes,
+        isReliable);
+
+    QVariantMap result;
+    result.insert("long", QString(QLatin1String(CLD2::LanguageName(language))));
+    result.insert("short", QString(QLatin1String(CLD2::LanguageCode(language))));
+    result.insert("accuracy", percent3[0]);
+
+    return result;
+}
+
+/***** ivan > *****/
+
 void Phantom::exit(int code)
 {
     if (m_config.debug()) {
@@ -478,10 +544,10 @@ void Phantom::clearCookies()
     m_defaultCookieJar->clearCookies();
 }
 
-
 // private:
 void Phantom::doExit(int code)
 {
+
     emit aboutToExit(code);
     m_terminated = true;
     m_returnValue = code;

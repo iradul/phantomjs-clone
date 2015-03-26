@@ -109,6 +109,9 @@ phantom.callback = function(callback) {
     // CommonJS module implementation follows
 
     window.global = window;
+/***** < ivan *****/
+    var net;
+/***** ivan > *****/
     // fs is loaded at the end, when everything is ready
     var fs;
     var cache = {};
@@ -116,6 +119,9 @@ phantom.callback = function(callback) {
     // use getters to initialize lazily
     // (for future, now both fs and system are loaded anyway)
     var nativeExports = {
+/***** < ivan *****/
+        get net() { return phantom.createNet(); },
+/***** ivan > *****/
         get fs() { return phantom.createFilesystem(); },
         get child_process() { return phantom._createChildProcess(); },
         get system() { return phantom.createSystem(); }
@@ -256,6 +262,35 @@ phantom.callback = function(callback) {
         return filename;
     };
 
+/***** < ivan *****/
+    Module.prototype._fetchModule = function(location) {
+        var location, code, module, result;
+        if (/^http(s?):\/\//.test(location)) { // http url
+        }
+        else if (phantom.remoteLibraryPath) { // remote library
+            location = (/%name%/.test(phantom.remoteLibraryPath))
+                    ? phantom.remoteLibraryPath.replace(/%name%/g, location)
+                    : phantom.remoteLibraryPath + location;
+        }
+        else {
+            return;
+        }
+        if (cache.hasOwnProperty(location)) {
+            return cache[location];
+        }
+        code = net.fetch(location);
+        result = net.fetchResult;
+        if (result && result.status == 200) {
+            module = new Module(location);
+            cache[location] = module;
+            module.exports = {};
+            module._compile(code);
+
+            return module;
+        }
+    };
+/***** ivan > *****/
+
     Module.prototype._getRequire = function() {
         var self = this;
 
@@ -295,6 +330,12 @@ phantom.callback = function(callback) {
 
         // else look for a file
         filename = this._getFilename(request);
+/***** < ivan *****/
+        if (!filename) {
+            var remoteModule = this._fetchModule(request);
+            if (remoteModule) return remoteModule.exports;
+        }
+/***** ivan > *****/
         if (!filename) {
             throw new Error("Cannot find module '" + request + "'");
         }
@@ -317,6 +358,9 @@ phantom.callback = function(callback) {
         var cwd, mainFilename, mainModule = new Module();
         window.require = mainModule._getRequire();
         fs = loadFs();
+/***** < ivan *****/
+        net = require('net');
+/***** ivan > *****/
         cwd = fs.absolute(phantom.libraryPath);
         mainFilename = joinPath(cwd, basename(require('system').args[0]) || 'repl');
         mainModule._setFilename(mainFilename);

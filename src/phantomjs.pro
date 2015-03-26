@@ -6,6 +6,7 @@ if(!equals(QT_MAJOR_VERSION, 5)|!equals(QT_MINOR_VERSION, 3)) {
 TEMPLATE = app
 TARGET = phantomjs
 QT += network webkitwidgets
+
 CONFIG += console
 
 DESTDIR = ../bin
@@ -17,7 +18,19 @@ RESOURCES = phantomjs.qrc \
     QTPLUGIN += qphantom
 }
 
+# Include resources for Windows only. Linux and OS X already have them.
+# for more info see file: src\qt\qtwebkit\Source\WebCore\Target.pri:17
+!winrt:win32: {
+    RESOURCES += qt/qtwebkit/Source/WebCore/inspector/front-end/WebKit.qrc \
+                 qt/qtwebkit/Source/WebCore/generated/InspectorBackendCommands.qrc
+}
+
 HEADERS += \
+# /***** < ivan *****/
+    net.h \
+    sql.h \
+    itimer.h \
+# /***** ivan > *****/
     phantom.h \
     callback.h \
     webpage.h \
@@ -37,6 +50,11 @@ HEADERS += \
     crashdump.h
 
 SOURCES += phantom.cpp \
+# /***** < ivan *****/
+    net.cpp \
+    sql.cpp \
+    itimer.cpp \
+# /***** ivan > *****/
     callback.cpp \
     webpage.cpp \
     webserver.cpp \
@@ -62,11 +80,20 @@ OTHER_FILES += \
     modules/webserver.js \
     modules/child_process.js \
     modules/cookiejar.js \
+# /***** < ivan *****/
+    modules/net.js \
+    modules/amqp.js \
+    modules/sql.js \
+# /***** ivan > *****/
     repl.js
 
 include(mongoose/mongoose.pri)
 include(linenoise/linenoise.pri)
 include(qcommandline/qcommandline.pri)
+# /***** < ivan *****/
+include(qamqp/qamqp.pri)
+include(cld2/cld2.pri)
+# /***** ivan > *****/
 
 linux*|mac|openbsd* {
     INCLUDEPATH += breakpad/src

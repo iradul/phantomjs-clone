@@ -38,6 +38,9 @@
 #include <QSet>
 #include <QSslConfiguration>
 #include <QTimer>
+/***** < ivan *****/
+#include "callback.h"
+/***** ivan > *****/
 
 class Config;
 class QNetworkDiskCache;
@@ -92,6 +95,10 @@ public:
     QVariantMap customHeaders() const;
 
     void setCookieJar(QNetworkCookieJar *cookieJar);
+/***** < ivan *****/
+    bool abortAllRequests;
+    Callback *requestsFilter;
+/***** ivan > *****/
 
 protected:
     bool m_ignoreSslErrors;

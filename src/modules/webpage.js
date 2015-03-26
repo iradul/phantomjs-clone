@@ -453,6 +453,10 @@ function decorateNewPage(opts, page) {
     // Calls from within the page when some javascript code running to long
     definePageCallbackHandler(page, handlers, "onLongRunningScript", "_getJsInterruptCallback");
 
+/***** < ivan *****/
+    definePageCallbackHandler(page, handlers, "_onFilter", "_getFilterCallback");
+/***** ivan > *****/
+
     page.event = {};
     page.event.modifier = {
         shift:  0x02000000,
@@ -882,6 +886,1442 @@ function decorateNewPage(opts, page) {
         'ydiaeresis': 255,
         'yen': 165
     };
+    
+/***** < ivan *****/
+    var _utils = require('utils');
+
+    Object.defineProperty(page, "document", {
+        get: function() {
+            var result;
+            result = this._one('body');
+            if (result) {
+                result = result.parentNode;
+                if (result) result = result.parentNode;
+            }
+            else {
+                result = document.querySelector('*');
+                if (result) result = result.parentNode;
+            }
+            return result;
+        }
+    });
+
+    Object.defineProperty(page, "width", {
+        get: function() {
+            var doc = page.document.documentElement;
+            return Math.max(
+                Math.max(doc.scrollWidth, doc.scrollWidth),
+                Math.max(doc.offsetWidth, doc.offsetWidth),
+                Math.max(doc.clientWidth, doc.clientWidth)
+            );
+        }
+    });
+
+    Object.defineProperty(page, "height", {
+        get: function() {
+            var doc = page.document.documentElement;
+            return Math.max(
+                Math.max(doc.scrollHeight, doc.scrollHeight),
+                Math.max(doc.offsetHeight, doc.offsetHeight),
+                Math.max(doc.clientHeight, doc.clientHeight)
+            );
+        }
+    });
+
+    Object.defineProperty(page, "language", {
+        get: function() {
+            return phantom.detectLanguage(this.html(), true);
+        }
+    });
+    
+    page.oneCss = function(selector, source) {
+        var result = null;
+        try {
+            if (!source) {
+                result = this._one(selector);
+            }
+            else {
+                var identitySelectorRex = /:root/, // this will point to source element itself
+                    sourceTempAttribute = '__temp_dummy_attrib__';
+                source.setAttribute(sourceTempAttribute, "");
+                result = source.querySelector(selector.replace(identitySelectorRex, '[' + sourceTempAttribute + ']'));
+                source.removeAttribute(sourceTempAttribute);
+            }
+        }catch(e){}
+        return result;
+    };
+
+    page.oneXPath = function(selector, source) {
+        var result = null;
+        try {
+            if (!source) {
+                var doc = this.document;
+                var a = doc.evaluate(selector, doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                if (a.snapshotLength > 0) {
+                    result = a.snapshotItem(0);
+                }
+            }
+            else {
+                var a = this.document.evaluate(selector, source, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                if (a.snapshotLength > 0) {
+                    result = a.snapshotItem(0);
+                }
+            }
+        }catch(e){}
+        return result;
+    };
+
+    page.one = function(selector, source) {
+        var result = null;
+        if (/\//.test(selector)) { // if starts with / try xpath first
+            result = this.oneXPath(selector, source);
+            if (result == null) {
+                result = this.oneCss(selector, source);
+            }
+        }
+        else {
+            result = this.oneCss(selector, source);
+            if (result == null) {
+                result = this.oneXPath(selector, source);
+            }
+        }
+        return result;
+    };
+    
+    page.allCss = function(selector, source) {
+        var result = null;
+        try {
+            if (!source) {
+                result = this.document.querySelectorAll(selector);
+            }
+            else {
+                var identitySelectorRex = /:root/, // this will point to source element itself
+                    sourceTempAttribute = '__temp_dummy_attrib__',
+                    result;
+                source.setAttribute(sourceTempAttribute, "");
+                result = source.querySelectorAll(selector.replace(identitySelectorRex, '[' + sourceTempAttribute + ']'));
+                source.removeAttribute(sourceTempAttribute);
+            }
+        }catch(e){}
+        return result;
+    };
+    
+    page.allXPath = function(selector, source) {
+        var result = null;
+        try {
+            if (!source) {
+                result = [];
+                var doc = this.document;
+                var a = doc.evaluate(selector, doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                for (var i = 0; i < a.snapshotLength; i++) {
+                    result.push(a.snapshotItem(i));
+                }
+            }
+            else {
+                result = [];
+                var a = this.document.evaluate(selector, source, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                for (var i = 0; i < a.snapshotLength; i++) {
+                    result.push(a.snapshotItem(i));
+                }
+            }
+        }catch(e){}
+        return result;
+    };
+
+    page.all = function(selector, source) {
+        var result = null;
+        if (/\//.test(selector)) { // if starts with / try xpath first
+            result = this.allXPath(selector, source);
+            if (result == null) {
+                result = this.allCss(selector, source);
+            }
+        }
+        else {
+            result = this.allCss(selector, source);
+            if (result == null) {
+                result = this.allXPath(selector, source);
+            }
+        }
+        return result;
+    };
+
+    definePageSignalHandler(page, handlers, "_onWaitForTest", "_waitForTest");
+
+    page.wait = function(timeout, maxrnd) {
+        if (timeout) {
+            timeout = parseInt(timeout);
+            if (maxrnd) {
+                maxrnd = parseInt(maxrnd);
+                timeout = Math.round(timeout + Math.random() * maxrnd);
+            }
+            _utils.debug('wait ' + timeout + 'ms');
+            this._wait(timeout);
+        }
+    };
+
+    page.waitFor = function(arg1, arg2, arg3) {
+        var thisPage = this;
+        if (arguments.length === 1 && detectType(arg1) === 'function') {
+            this._onWaitForTest = function() {
+                thisPage._waitForTestFunctionResult = arg1.apply(thisPage, arguments); //< Invoke the actual callback
+            }
+            return this._waitForFunction();
+        } else if (arguments.length === 2 && detectType(arg1) === 'number' && detectType(arg2) === 'function') {
+            this._onWaitForTest = function() {
+                thisPage._waitForTestFunctionResult = arg2.apply(thisPage, arguments); //< Invoke the actual callback
+            }
+            return this._waitForFunction(arg1);
+        } else if (arguments.length === 3 && detectType(arg1) === 'number' && detectType(arg2) === 'number' && detectType(arg3) === 'function') {
+            this._onWaitForTest = function() {
+                thisPage._waitForTestFunctionResult =  arg3.apply(thisPage, arguments); //< Invoke the actual callback
+            }
+            return this._waitForFunction(arg1, arg2);
+        }
+        throw "Wrong use of WebPage#waitFor";
+    };
+
+    page.visible = function (selector, source) {
+        var el = (isElement(selector)) ? selector : page.one(selector, source);
+
+        if (el) {
+            var comp = window.getComputedStyle(el, null);
+            return comp.visibility !== 'hidden' && comp.display !== 'none' && el.offsetHeight > 0 && el.offsetWidth > 0;
+        }
+        return false;
+    };
+
+    var mutationStarted = false,
+        mutationChanged = true,
+        mutationObserver = new WebKitMutationObserver(function() { mutationChanged = false; });
+
+    page.mutation = mutationObserver;
+
+    function resetMutation() {
+        mutationStarted = false;
+        mutationChanged = false;
+        mutationObserver.disconnect();
+    };
+
+    page.waitForMutationBegin = function(selector, init) {
+        resetMutation();
+        if (init.childList || init.attributes || init.characterData) {
+            var target = page.one(selector);
+            if (target) {
+                mutationStarted = true;
+                mutationObserver.observe(target, init);
+                return true;
+            }
+        }
+        return false;
+    };
+
+    page.waitForMutation = function() {
+        var a = [];
+        if (arguments.length == 4) {
+            this.waitForMutationBegin(
+                arguments[0], // selector
+                arguments[1] // init
+                );
+            a.push(arguments[2]); // timeout
+            a.push(arguments[3]); // interval
+        }
+        else if (arguments.length == 3) {
+            this.waitForMutationBegin(
+                arguments[0], // selector
+                arguments[1] // init
+                );
+            a.push(arguments[2]); // timeout
+        }
+        else if (arguments.length == 2) {
+            if (typeof(arguments[0]) == 'string') {
+                this.waitForMutationBegin(
+                    arguments[0], // selector
+                    arguments[1] // init
+                    );
+            }
+            else {
+                a.push(arguments[0]); // timeout
+                a.push(arguments[1]); // interval
+            }
+        }
+        else if (arguments.length == 1) {
+            a.push(arguments[0]); // timeout
+        }
+
+        var wait = mutationStarted && this.waitFor.apply(this, a.concat(function() {
+            if (mutationChanged || mutationObserver.takeRecords().length) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }));
+
+        return wait;
+    };
+
+    page.waitForSelector = function(selector, timeout, interval) {
+        var thisPage = this;
+        var a = [];
+        if (timeout) a.push(timeout);
+        if (interval) a.push(interval);
+        return this.waitFor.apply(this, a.concat(function() {
+            var elem = thisPage.one(selector);
+            return elem !== null 
+                &&  (elem.nextSibling != null 
+                    || thisPage.document.readyState === 'interactive' 
+                    || thisPage.document.readyState === 'complete'
+                    );
+        }));
+    };
+
+    page.waitForNotSelector = function(selector, timeout, interval) {
+        var thisPage = this;
+        var a = [];
+        if (timeout) a.push(timeout);
+        if (interval) a.push(interval);
+        return this.waitFor.apply(this, a.concat(function() {
+            return thisPage.one(selector) === null;
+        }));
+    };
+
+    page.waitForVisible = function(selector, timeout, interval) {
+        var thisPage = this;
+        var a = [];
+        if (timeout) a.push(timeout);
+        if (interval) a.push(interval);
+        return this.waitFor.apply(this, a.concat(function() {
+            return thisPage.visible(selector);
+        }));
+    };
+
+    page.waitForNotVisible = function(selector, timeout, interval) {
+        var thisPage = this;
+        var a = [];
+        if (timeout) a.push(timeout);
+        if (interval) a.push(interval);
+        return this.waitFor.apply(this, a.concat(function() {
+            return !thisPage.visible(selector);
+        }));
+    };
+
+    function _onWaitDie(type) {
+        if (this.onWaitDie) {
+            try {
+                this.onWaitDie(type);
+                return;
+            }
+            catch (e) {}
+        }
+        this.quit('wait timeout for [' + type + ']', 1);
+    }
+
+    page.waitForPageOrDie = function () {
+        if (!this.waitForPage.apply(this, arguments)) {
+            _onWaitDie.call(this,'Page');
+        }
+    };
+    page.waitForSelectorOrDie = function () {
+        if (!this.waitForSelector.apply(this, arguments)) {
+            _onWaitDie.call(this,'Selector');
+        }
+    };
+    page.waitForNotSelectorOrDie = function () {
+        if (!this.waitForNotSelector.apply(this, arguments)) {
+            _onWaitDie.call(this,'NotSelector');
+        }
+    };
+    page.waitForOrDie = function () {
+        if (!this.waitFor.apply(this, arguments)) {
+            _onWaitDie.call(this,'Function');
+        }
+    };
+    page.waitForVisibleOrDie = function () {
+        if (!this.waitForVisible.apply(this, arguments)) {
+            _onWaitDie.call(this,'Visible');
+        }
+    };
+    page.waitForNotVisibleOrDie = function () {
+        if (!this.waitForNotVisible.apply(this, arguments)) {
+            _onWaitDie.call(this,'NotVisible');
+        }
+    };
+
+    page.exists = function(selector, source) {
+        return page.one(selector, source) != null;
+    };
+
+    page.remove = function(selector, source) {
+        if (selector == '[object NodeList]') {
+            var r = true;
+            for (var i = 0; i < selector.length; i++) {
+                r = r && this.remove(selector[i]);
+            }
+            return r;
+        }
+        else if (isElement(selector)) {
+            selector.parentNode.removeChild(selector);
+            return true;
+        }
+        else if (selector) {
+            return this.remove(this.all(selector, source));
+        }
+        else {
+            return false;
+        }
+    };
+
+    var networkStats = {
+        requests: 0,
+        totalBodySize: 0,
+        totalBodyResponses: 0,
+        aborted: 0,
+    };
+
+    Object.defineProperty(page, 'networkStats', {
+        get: function() {
+            return networkStats;
+        }
+    });
+
+    /* this code is for handling sync open function */
+    definePageSignalHandler(page, handlers, "_onRequested", "resourceRequested");
+    definePageSignalHandler(page, handlers, "_onReceived", "resourceReceived");
+    definePageSignalHandler(page, handlers, "_onError", "resourceError");
+    definePageSignalHandler(page, handlers, "_onTimeout", "resourceTimeout");
+    function startCurrentRequest(url) {
+        currentRequest.finished = false;
+        currentRequest.trace = 1;
+        currentRequest.url = (decodeURI(url) !== url) ? url : encodeURI(url); // encode only if it's not already encoded
+        currentRequest.origin = url;
+    }
+    function resetCurrentRequest() {
+        currentRequest = {
+            finished: true,
+            id: -1,
+            trace: 0,
+            url: undefined,
+            origin: undefined,
+            redirections: []
+        }
+    }
+    function finishCurrentRequest(s, sm, e, em, t) {
+        lastOpenResult = {
+            actualUrl: currentRequest.url,
+            status: s,
+            statusMessage: sm,
+            url: currentRequest.origin,
+            redirections: currentRequest.redirections,
+            error: e,
+            errorMessage: em,
+            timeout: (t) ? true : false,
+            duration: (new Date()).getTime() - currentRequest.started
+        }
+        resetCurrentRequest();
+    }
+    var currentRequest, // holds state of current opensync
+        lastOpenResult,
+        openOnly;
+    resetCurrentRequest();
+    Object.defineProperty(page, 'openResult', {
+        get: function() {
+            return lastOpenResult;
+        }
+    });
+
+    var filters = [];
+    Object.defineProperty(page, 'filter', {
+        get: function() {
+            return filters;
+        },
+        set: function(val) {
+            if (Array.isArray(val)) {
+                filters = val;
+            }
+            else {
+                filters = [val];
+            }
+        }
+    });
+
+    page._onFilter = function(url) {
+        var ret = false;
+        if (url[url.length - 1] === '/') { // always remove trailing slash
+            url = url.substr(0,url.length - 1);
+        }
+        for (var i = 0; i < filters.length; i++) {
+            var filter = filters[i];
+            if (typeof filter == "string") {
+                if (filter[filter.length - 1] === '/') { // always remove trailing slash
+                    filter = filter.substr(0,filter.length - 1);
+                }
+                if(filter != url) {
+                    ret = true;
+                    break;
+                }
+            }
+            else if (filter instanceof RegExp && !filter.test(url)) { 
+                ret = true;
+                break;
+            }
+        }
+        return ret;
+    }
+
+    page._onRequested = function(request, networkRequest) {
+        networkStats.requests++;
+        if (currentRequest.trace === 1 &&
+                (currentRequest.url === request.url
+                ||
+                currentRequest.url === request.url.replace(/\/$/, ''))) {
+            currentRequest.trace = 2;
+            currentRequest.id = request.id; // we identified request id
+            currentRequest.started =(new Date()).getTime();
+        }
+    }
+    page._onReceived = function(response) {
+        if (response.bodySize) {
+            networkStats.totalBodySize += response.bodySize;
+            networkStats.totalBodyResponses++;
+        }
+        if (response.status == null) {
+            networkStats.aborted++;
+        }
+        if (currentRequest.trace === 2 && response.id === currentRequest.id) { // we got response from initial request
+            currentRequest.trace = 0;
+            currentRequest.status = response.status;
+            currentRequest.url = response.url;
+            switch (response.status) {
+                // http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
+                case 301: // Moved Permanently
+                case 302: // Found
+                case 303: // See Other
+                case 307: // Temporary Redirect
+                    // here we handle redirection
+                    var redir;
+                    if (response.redirectURL)
+                        redir = response.redirectURL;
+                    else
+                        for (var i = 0; i < response.headers.length; i++) {
+                            if (/location/i.test(response.headers[i].name)) {
+                                redir = /^https?\:\/\/[^\/:?#]+/i.exec(response.url) + ((response.headers[i].value[0] == '/') ? response.headers[i].value : '/' + response.headers[i].value);
+                                break;
+                            }
+                        }
+                    currentRequest.redirections.push(redir);
+                    currentRequest.url = redir;
+                    currentRequest.trace = 1;
+                    if (openOnly) {
+                        page.filter = redir;
+                    }
+                    break;
+                case 200:
+                default:
+                    finishCurrentRequest(response.status, response.statusText); // something is wrong
+                    break;
+            }
+        }
+    };
+    page._onError = function(resourceError) {
+        if (resourceError.id === currentRequest.id) { // we got error response from initial request
+            finishCurrentRequest(0, undefined, resourceError.errorCode, resourceError.errorString);
+        }
+    };
+    page._onTimeout = function(resourceError) {
+        if (resourceError.id === currentRequest.id) { // we got timeout response from initial request
+            finishCurrentRequest(0, undefined, resourceError.errorCode, resourceError.errorString, true);
+        }
+    };
+
+    page.openonly = function (o) {
+        if (typeof o === 'string') {
+            o = {
+                url : o,
+                only : true,
+            }
+        }
+        else if (!o.only) {
+            o.only = true;
+        }
+        return page.opensync(o);
+    }
+
+    page.opensync = function() {
+        if (arguments.length != 1 || arguments[0] == undefined) {
+            finishCurrentRequest(0, '', 'Invalid call', '', false);
+        }
+        else {
+            if (typeof(arguments[0]) == 'string') {
+                cmd = {
+                    url: arguments[0],
+                }
+            }
+            else {
+                cmd = arguments[0];
+            }
+            if (!/^https?:\/\//.test(cmd.url)) {
+                finishCurrentRequest(0, '', 'Invalid url', '', false);
+            }
+            else {
+                var filterBackup = page.filter;
+                if (openOnly = !!cmd.only) {
+                    page.filter = cmd.url;
+                }
+                if (cmd.timeout == undefined) cmd.timeout = 300000;
+                if (cmd.retries == undefined) cmd.retries = 0;
+                var retry = 0;
+                while (retry <= cmd.retries) {
+                    if (retry > 0 && cmd.delay) {
+                        this.wait(cmd.delay);
+                    }
+                    this.stop();
+                    startCurrentRequest(cmd.url);
+                    this.open(cmd.url);
+                    if (this.waitFor(cmd.timeout, 1000, function() {
+                        return currentRequest.finished;
+                    })) {
+                        this.waitForPage();
+                    }
+                    else {
+                        finishCurrentRequest(0, undefined, 'opensync timeout', 0, true);
+                    }
+                    if (this.openResult.status == 200) {
+                        break;
+                    }
+                    else if (retry > 0) {
+                        _utils.debug('retrying [' + retry + '] ' + cmd.url)
+                    }
+                    retry++;
+                }
+                if (openOnly) {
+                    page.filter = filterBackup;
+                    openOnly = false;
+                }
+            }
+        }
+        return this.openResult;
+    };
+
+    page.openrawClean = function (html) {
+        return html
+            .replace(/<!--[\s\S]*?-->/g,'')
+            .replace(/<script[\s\S]+?<\/script>/gi,'')
+            .replace(/<noscript[\s\S]+?<\/noscript>/gi,'')
+            // .replace(/^[\s\S]*?<body[\s\S]*?>/gi, '')
+            // .replace(/<\/body>[\s\S]*?$/gi, '')
+            ;
+    }
+
+    var _net;
+    page.openraw = function () {
+        if (arguments.length == 0) return null;
+        if (!_net) {
+            _net = require('net');
+            _net.handleRedirections = true;
+            _net.bypassProxy = false;
+        }
+        
+        // prepare openResult
+        startCurrentRequest();
+
+        _net.userAgent = this.settings.userAgent;
+        var html = _net.fetch.apply(_net, arguments);
+        html = this.openrawClean(html);
+
+        this.setContent(html, _net.fetchResult.actualUrl);
+        this.waitForPage();
+        // finish openResult
+        finishCurrentRequest(
+            _net.fetchResult.status,
+            _net.fetchResult.statusMessage,
+            _net.fetchResult.error,
+            _net.fetchResult.errorMessage
+            );
+        // fix values
+        lastOpenResult.actualUrl = _net.fetchResult.actualUrl;
+        lastOpenResult.url = _net.fetchResult.url;
+        lastOpenResult.redirections = _net.fetchResult.redirections;
+
+        // update networkStats
+        var r = 1 + _net.fetchResult.redirections.length;
+        networkStats.requests += r;
+        networkStats.totalBodySize += _net.fetchResult.size;
+        networkStats.totalBodyResponses += r;
+
+        return this.openResult;
+    }
+
+    page.input = function (field, value) {
+        if (field instanceof NodeList || field.toString() === '[object NodeList]') {
+            for (var i = 0; i < field.length; i++) {
+                this.input(field[i], value);
+            }
+            return;
+        }
+        var logValue;
+        value = logValue = (value || "");
+        if (typeof(field) == 'string') {
+            field = this.one(field);
+        }
+
+        try { field.focus(); } catch (e) {}
+        var nodeName = field.nodeName.toLowerCase();
+        switch (nodeName) {
+            case "input":
+                var type = field.getAttribute('type') || "text";
+                switch (type.toLowerCase()) {
+                    case "color":
+                    case "date":
+                    case "datetime":
+                    case "datetime-local":
+                    case "email":
+                    case "hidden":
+                    case "month":
+                    case "number":
+                    case "password":
+                    case "range":
+                    case "search":
+                    case "tel":
+                    case "text":
+                    case "time":
+                    case "url":
+                    case "week":
+                        field.value = value;
+                        break;
+                    case "checkbox":
+                        field.checked = value ? true : false;
+                        break;
+                    case "radio":
+                        field.checked = (field.value === value);
+                        break;
+                    case "file":
+                    default:
+                        // throw new Error("Unsupported input field type: " + type);
+                        break;
+                }
+                break;
+            case "select":
+            case "textarea":
+                field.value = value;
+                break;
+            default:
+                // throw new Error('Unsupported field type: ' + nodeName);
+                break;
+        }
+
+        // firing the `change` and `input` events
+        ['change', 'input'].forEach(function(name) {
+            var event = this.document.createEvent("HTMLEvents");
+            event.initEvent(name, true, true);
+            field.dispatchEvent(event);
+        });
+
+        // blur the field
+        try { field.blur(); } catch (e) {}
+    };
+        
+    page.fill = function (selector, vals, submit) {
+        var form;
+        submit = submit === true ? submit : false;
+        
+        var fillResults = {
+            success: false,
+            errors: [],
+            fields: [],
+            files:  []
+        };
+        if (isElement(selector)) {
+            form = selector;
+        } else {
+            form = this.one(selector);
+        }
+        if (!form) return false;
+        for (var name in vals) {
+            if (!vals.hasOwnProperty(name)) {
+                continue;
+            }
+            var fields = this.all('[name="' + name + '"]', form);
+            var value = vals[name];
+            if (!fields || fields.length === 0) {
+                continue;
+            }
+            for (var i = 0; i < fields.length; i++) {
+                var field = fields[i];
+                if (field.getAttribute('type').toLowerCase() === "file") {
+                    fillResults.files.push({
+                        name: name,
+                        path: value
+                    });
+                } else {
+                    fillResults.fields[name] = this.input(field, value);
+                } 
+            }
+        }
+
+        // File uploads
+        if (fillResults.files && fillResults.files.length > 0) {
+            (function _each(self) {
+                fillResults.files.forEach(function _forEach(file) {
+                    var fileFieldSelector = [selector, 'input[name="' + file.name + '"]'].join(' ');
+                    self.uploadFile(fileFieldSelector, file.path);
+                });
+            })(this);
+        }
+        // Form submission?
+        if (submit) {
+            var form = this.one(selector);
+            var method = (form.getAttribute('method') || "GET").toUpperCase();
+            var action = form.getAttribute('action') || "unknown";
+            if (typeof form.submit === "function") {
+                _utils.debug('submiting form with method [' + method + '] and action [' + action + ']');
+                form.submit();
+            } else {
+                _utils.debug('submiting/clicking form with method [' + method + '] and action [' + action + ']');
+                form.submit.click();
+            }
+            this.wait(50); // we need to delay just a little bit so that pageloading can begin
+        }
+        return true;
+    };
+
+    page.capture = function (targetFile, e, options) {
+        var previousClipRect, clipRect;
+        clipRect = (isElement(e)) ? e.getBoundingClientRect() : e;
+        previousClipRect = this.clipRect;
+        this.clipRect = clipRect;
+
+        this.render(targetFile, options);
+        if (previousClipRect) {
+            this.clipRect = previousClipRect;
+        }
+        return this;
+    };
+
+    page.find = function () {
+        var patterns, selector, source;
+        patterns = arguments[0];
+        if (arguments.length == 3) {
+            selector = arguments[1];
+            source = arguments[2];
+        } else if (arguments.length == 2) {
+            if (isElement(arguments[1])) {
+                source = arguments[1];
+            } else {
+                selector = arguments[1];
+            }
+        }
+        if (!Array.isArray(patterns)) patterns = [patterns];
+        for (var p = 0; p < patterns.length; p++) {
+            var pattern = patterns[p];
+            var isNotRex = detectType(pattern) != 'regexp';
+            if (isNotRex) pattern = pattern.toLowerCase();
+            var elems = page.all(selector||'*', source),
+                elem = null;
+            for (var i = 0; i < elems.length; i++) {
+                if (isNotRex && pattern === elems[i].textContent.trim().toLowerCase()
+                    ||
+                    !isNotRex && pattern.exec(elems[i].textContent.trim()) ) {
+                    return elems[i];
+                }
+            }
+        }
+        return null;
+    }
+    
+    page.click = function () {
+        var elem,
+            selector,
+            source,
+            emulated = 0,
+            x,y;
+
+        if (arguments.length == 0) { // ()
+            return;
+        }
+        else if (arguments.length == 1) {
+            // (selector)
+            // (element)
+            selector = arguments[0];
+        }
+        else if (arguments.length == 2) {
+            // (x,y)
+            // (selector,source)
+            // (selector,emulated)
+            // (element,emulated)
+            if (typeof arguments[0] == 'number' && typeof arguments[1]  == 'number') { // (x,y)
+                x = arguments[0];
+                y = arguments[1];
+            }
+            else {
+                selector = arguments[0];
+                if (typeof arguments[1] == 'boolean' || typeof arguments[1] == 'number') { // (selector,source)
+                    emulated = arguments[1];
+                } else { // (*,emulated)
+                    source = arguments[1];
+                }
+            }
+        }
+        else {
+            // (selector,source,emulated)
+            selector = arguments[0];
+            source = arguments[1];
+            emulated = arguments[2];
+        }
+        if (typeof emulated == 'boolean') {
+            emulated = emulated ? 1 : 0;
+        }
+
+
+        if (typeof selector == 'string') {
+            elem = this.one(selector, source);
+        }
+        else if (selector == '[object NodeList]') {
+            var ret = true;
+            for (var i = 0; i < selector.length; i++) {
+                ret = ret && this.click(selector[i], emulated);
+            }
+            return ret;
+        }
+        else {
+            elem = selector;
+        }
+        if (emulated == 1) {
+            try {
+                var evt = this.document.createEvent("MouseEvents");
+                var center_x = 1, center_y = 1;
+                try {
+                    var pos = elem.getBoundingClientRect();
+                    center_x = Math.floor((pos.left + pos.right) / 2),
+                    center_y = Math.floor((pos.top + pos.bottom) / 2);
+                } catch (e) { }
+                evt.initMouseEvent('click', true, true, this.document.defaultView, 1, 1, 1, center_x, center_y, false, false, false, false, 0, elem);
+                elem.dispatchEvent(evt);
+                return true;
+            }
+            catch (e) {
+                return false;
+            }
+        }
+        else if (emulated == 2) {
+            if (elem.click && /\[native code\]/.test(elem.click.toString())) {
+                try {
+                    elem.click();
+                    return true;
+                }
+                catch (e) {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            // backup viewport size & and make it biggest posible so that click can work
+            var backupSize = this.viewportSize,
+                backupScroll = this.scrollPosition;
+            this.viewportSize = { width: this.width, height: this.height };
+            this.scrollPosition = { left: 0, top: 0 };
+            try {
+                if (x != undefined) {
+                    this.sendEvent.apply(this, ['click', x + backupScroll.left, y + backupScroll.top]);
+                    return true;
+                }
+                else {
+                    var clipRect = elem.getBoundingClientRect();
+                    var x = Math.round(clipRect.left + clipRect.width / 2);
+                    var y = Math.round(clipRect.top  + clipRect.height / 2);
+
+                    this.sendEvent.apply(this, ['click', x, y]);
+                }
+                return true;
+            } catch (e) {
+                return false;
+            }
+            finally {
+                // restore viewport and scroll to original
+                this.viewportSize = backupSize;
+                this.scrollPosition = backupScroll;
+            }
+        }
+    };
+
+    function hasProperty(obj, prop) {
+        var proto = obj.__proto__ || obj.constructor.prototype;
+        return (prop in obj) || (prop in proto) && proto[prop] === obj[prop];
+    }
+
+    function isElement(something) {
+        return (something && typeof something === 'object' && hasProperty(something, 'innerHTML') && hasProperty(something, 'tagName') && hasProperty(something, 'querySelector'));
+    }
+
+    function text0helper(e, filter) {
+        var txt = '',
+            filterIndex = -1;
+        for (var n = 0; n < e.childNodes.length; n++) {
+            if (e.childNodes[n].nodeType == 3) {
+                filterIndex++;
+                if (!filter || filter.indexOf(filterIndex) !== -1) {
+                    txt += e.childNodes[n].nodeValue + ' ';
+                }
+            }
+        }
+        return txt.trim();
+    }
+
+    page.text0 = function() {
+        var element, filter, separator = ' ';
+        if (arguments.length === 0) { // ()
+            throw  new Error('Invalid use of function');
+        }
+        else if (arguments.length === 1) {
+            // (element)
+            // (nodeList)
+            if (isElement(arguments[0]) || arguments[0] == '[object NodeList]') {
+                element = arguments[0];
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else if (arguments.length === 2) {
+            // (nodeList,separator)
+            if (arguments[0] == '[object NodeList]' && typeof arguments[1] === 'string') {
+                separator = arguments[1];
+                element = arguments[0];
+            }
+            // (element,filter)
+            // (nodeList,filter)
+            else if ((isElement(arguments[0]) || arguments[0] == '[object NodeList]') && detectType(arguments[1]) === 'array') {
+                filter = arguments[1];
+                element = arguments[0];
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else if (arguments.length === 3) {
+            // (nodeList,filter,separator)
+            if (arguments[0] == '[object NodeList]' && detectType(arguments[1]) === 'array' && typeof arguments[2] === 'string') {
+                separator = arguments[2];
+                filter = arguments[1];
+                element = arguments[0];
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        if (element == '[object NodeList]') {
+            var result = [];
+            for (var i = 0; i < element.length; i++) {
+                result.push(text0helper(element[i], filter));
+            }
+            if (separator != '[]') {
+                return result.join(separator);
+            }
+            else {
+                return result;
+            }
+        }
+        else {
+            return text0helper(element, filter);
+        }
+    }
+
+    page.text = function() {
+        var element, visibleOnly = false, separator = ' ';
+        if (arguments.length === 0) { // ()
+            element = page.one('body');
+        }
+        else if (arguments.length === 1) {
+            // (visibleOnly)
+            if (typeof arguments[0] === 'boolean') {
+                visibleOnly = arguments[0];
+                element = page.one('body');
+            }
+            // (source)
+            // (nodeList)
+            else if (isElement(arguments[0]) || arguments[0] == '[object NodeList]') {
+                element = arguments[0];
+            }
+            // (selector)
+            else if (typeof arguments[0] === 'string') {
+                element = this.one(arguments[0]);
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else if (arguments.length === 2) {
+            // (nodeList,separator)
+            if (arguments[0] == '[object NodeList]' && typeof arguments[1] === 'string') {
+                separator = arguments[1];
+                element = arguments[0];
+            }
+            // (nodeList,visibleOnly)
+            else if (arguments[0] == '[object NodeList]' && typeof arguments[1] === 'boolean') {
+                visibleOnly = arguments[1];
+                element = arguments[0];
+            }
+            // (source,visibleOnly)
+            else if (isElement(arguments[0]) && typeof arguments[1] === 'boolean') {
+                visibleOnly = arguments[1];
+                element = arguments[0];
+            }
+            // (selector,visibleOnly)
+            else if (typeof arguments[0] === 'string' && typeof arguments[1] === 'boolean') {
+                visibleOnly = arguments[1];
+                element = this.one(arguments[0]);
+            }
+            // (selector, source)
+            else if (typeof arguments[0] === 'string' && isElement(arguments[1])) {
+                element = this.one(arguments[0], arguments[1]);
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else if (arguments.length === 3) {
+            // (nodeList,separator,visibleOnly)
+            if (arguments[0] == '[object NodeList]' && typeof arguments[1] === 'string' && typeof arguments[2] === 'boolean') {
+                visibleOnly = arguments[2];
+                separator = arguments[1];
+                element = arguments[0];
+            }
+            // (selector,source,visibleOnly)
+            else if (typeof arguments[0] === 'string' && isElement(arguments[1]) && typeof arguments[2] === 'boolean') {
+                visibleOnly = arguments[2];
+                element = this.one(arguments[0], arguments[1]);
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else {
+            throw  new Error('Invalid use of function');
+        }
+        if (element == '[object NodeList]') {
+            var result = [];
+            for (var i = 0; i < element.length; i++) {
+                result.push((visibleOnly) ? element[i].innerText.trim() : element[i].textContent.trim());
+            }
+            if (separator != '[]') {
+                return result.join(separator);
+            }
+            else {
+                return result;
+            }
+        }
+        else {
+            return (element) ? ((visibleOnly) ? element.innerText.trim() : element.textContent.trim())  : '';
+        }
+    };
+
+    page.html = function() {
+        var element, outer = false, separator='';
+        if (arguments.length === 0) { // ()
+            var body = page.one('body');
+            if (body) {
+                element = body.parentNode;
+            }
+        }
+        else if (arguments.length === 1) {
+            // (outer)
+            if (typeof arguments[0] === 'boolean') {
+                outer = arguments[0];
+                var body = page.one('body');
+                if (body) {
+                    element = body.parentNode;
+                }
+            }
+            // (source)
+            // (nodeList)
+            else if (isElement(arguments[0]) || arguments[0] == '[object NodeList]') {
+                element = arguments[0];
+            }
+            // (selector)
+            else if (typeof arguments[0] === 'string') {
+                element = this.one(arguments[0]);
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else if (arguments.length === 2) {
+            // (nodeList,separator)
+            if (arguments[0] == '[object NodeList]' && typeof arguments[1] === 'string') {
+                separator = arguments[1];
+                element = arguments[0];
+            }
+            // (nodeList,outer)
+            else if (arguments[0] == '[object NodeList]' && typeof arguments[1] === 'boolean') {
+                outer = arguments[1];
+                element = arguments[0];
+            }
+            // (source,outer)
+            else if (isElement(arguments[0]) && typeof arguments[1] === 'boolean') {
+                outer = arguments[1];
+                element = arguments[0];
+            }
+            // (selector,outer)
+            else if (typeof arguments[0] === 'string' && typeof arguments[1] === 'boolean') {
+                outer = arguments[1];
+                element = this.one(arguments[0]);
+            }
+            // (selector, source)
+            else if (typeof arguments[0] === 'string' && isElement(arguments[1])) {
+                element = this.one(arguments[0], arguments[1]);
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else if (arguments.length === 3) {
+            // (nodeList,separator,outer)
+            if (arguments[0] == '[object NodeList]' && typeof arguments[1] === 'string' && typeof arguments[2] === 'boolean') {
+                outer = arguments[2];
+                separator = arguments[1];
+                element = arguments[0];
+            }
+            // (selector,source,outer)
+            else if (typeof arguments[0] === 'string' && isElement(arguments[1]) && typeof arguments[2] === 'boolean') {
+                outer = arguments[2];
+                element = this.one(arguments[0], arguments[1]);
+            }
+            else {
+                throw  new Error('Invalid use of function');
+            }
+        }
+        else {
+            throw  new Error('Invalid use of function');
+        }
+        if (element == '[object NodeList]') {
+            var result = [];
+            for (var i = 0; i < element.length; i++) {
+                result.push((outer) ? element[i].outerHTML : element[i].innerHTML);
+            }
+            if (separator != '[]') {
+                return result.join(separator);
+            }
+            else {
+                return result;
+            }
+        }
+        else {
+            return (element) ? ((outer) ? element.outerHTML : element.innerHTML)  : '';
+        }
+    };
+
+    page.quit = function(msg, code) {
+        if (msg) {
+            console.log(msg);
+        }
+        if (code) {
+            phantom.exit(code);
+        }
+        else {
+            phantom.exit();
+        }
+    };
+
+    page.back = function() {
+        if (this.goBack()) {
+            return this.waitForPage();
+        }
+        else {
+            return false;
+        }
+    };
+
+    page.forward = function() {
+        if (this.goForward()) {
+            return this.waitForPage();
+        }
+        else {
+            return false;
+        }
+    };
+
+    // grabbed from: http://james.padolsey.com/javascript/getting-a-fully-o-url/
+    page.getUrl = function(e,attr){
+        var url = "";
+        if (isElement(e)) {
+            if (attr) {
+                url = e.getAttribute(attr);
+            }
+            else {
+                url = e.getAttribute('href');
+                if (url == null) url = e.getAttribute('src');
+            }
+            if (url == null) {
+                if (attr) {
+                    e = page.one('[' + attr + ']', e);
+                }
+                else {
+                    e = page.one('a[href],img[src]', e);
+                }
+                if (e) {
+                    return this.getUrl(e, attr);
+                }
+                else {
+                    return "";
+                }
+            }
+        }
+        else {
+            url = e;
+        }
+        if (url != null) {
+            return page.resolveUrl(url);
+            // var img = page.document.createElement('img');
+            // img.src = url; // set string url
+            // url = img.src; // get qualified url
+            // img.src = 'http://'; // no server request
+        }
+        return url;
+    };
+
+    page.ajax = function(url, method, data, settings) {
+        return this.evaluate(function(url, method, data, settings) {
+            try {
+                var xhr = new XMLHttpRequest(),
+                    dataString = "",
+                    dataList = [];
+                method = method && method.toUpperCase() || "GET";
+                var contentType = settings && settings.contentType || "application/x-www-form-urlencoded";
+                xhr.open(method, url, false);
+                if (settings && settings.overrideMimeType) {
+                    xhr.overrideMimeType(settings.overrideMimeType);
+                }
+                if (settings && settings.headers) {
+                    for (var h in settings.headers) {
+                        xhr.setRequestHeader(h, settings.headers[h]);
+                    }
+                }
+                if (method === "POST") {
+                    if (typeof data === "object") {
+                        for (var k in data) {
+                            dataList.push(encodeURIComponent(k) + "=" + encodeURIComponent(data[k].toString()));
+                        }
+                        dataString = dataList.join('&');
+                    } else if (typeof data === "string") {
+                        dataString = data;
+                    }
+                    xhr.setRequestHeader("Content-Type", contentType);
+                }
+                xhr.send(method === "POST" ? dataString : null);
+                return xhr.responseText;
+            } catch (e) {
+                return null;
+            }
+        }, url, method, data, settings);
+    };
+
+    // scroll to element or (x,y) position
+    page.scrollTo = function() {
+        var x,y;
+        if (arguments.length == 1) {
+            var elem;
+            if (typeof arguments[0] == 'string') {
+                elem = this.one(arguments[0]);
+            }
+            else {
+                elem = arguments[0];
+            }
+            if (isElement(elem)) {
+                var pos = elem.getBoundingClientRect(),
+                    currentScroll = this.scrollPosition;
+                x = pos.left + currentScroll.left;
+                y = pos.top + currentScroll.top;              
+            }
+        }
+        else if (arguments.length == 2) {
+            x = arguments[0];
+            y = arguments[1];
+        }
+        if (!isNaN(x) && !isNaN(y)) {
+            if (x < 0) x = 0; else if (x > this.width) x = this.width;
+            if (y < 0) y = 0; else if (y > this.height) y = this.height;
+            this.scrollPosition = { left: x, top: y };
+            return this.scrollPosition;
+        }
+    }
+
+    page.scrollToTop = function() {
+        return this.scrollTo(0,0);
+    }
+
+    page.scrollToBottom = function() {
+        return this.scrollTo(0, this.height);
+    }
+
+    page.serializeForm = function() {
+        var form = (isElement(arguments[0])) ? arguments[0] : this.one(arguments[0], arguments[1]);
+        if (!form || !form.elements) return null;
+
+        var obj = null,
+            rCRLF = /\r?\n/g,
+            elems = form.elements;
+        // test each form element
+        for (var ie = 0; ie < elems.length; ie++) {
+            var elem = elems[ie],
+                type = elem.type;
+            // test if "elem" should be included
+            if (elem.name
+                && !elem.disabled // don't include if it's disabled
+                && /^(?:input|select|textarea|keygen)/i.test(elem.nodeName) // element must be form element
+                && !/^(?:submit|button|image|reset|file)$/i.test(type) // element should not be submit element
+                && (elem.checked || !/^(?:checkbox|radio)$/i.test(type)) // include "check type" element only if it's checked
+                ) {
+                var value;
+
+                if (elem.selectedIndex === undefined) {
+                    value = elem.value;
+                }
+                else { // "select" element
+                    var values = [],
+                        index = elem.selectedIndex,
+                        options = elem.options,
+                        one = elem.type === "select-one";
+
+                    if ( index >= 0 ) {
+                        // Loop through all the selected options
+                        for ( var i = one ? index : 0, max = one ? index + 1 : options.length; i < max; i++ ) {
+                            var option = options[ i ];
+
+                            // Don't return options that are disabled or in a disabled optgroup
+                            if (option.selected 
+                                && !option.disabled
+                                && (!option.parentNode || !option.parentNode.disabled || !option.parentNode.nodeName == "optgroup") ) {
+
+                                // Get the specific value for the option
+                                value = option.value;
+
+                                // We don't need an array for one selects
+                                if ( one ) {
+                                    break;
+                                }
+
+                                // Multi-Selects return an array
+                                values.push( value );
+                            }
+                        }
+
+                        if (!one) {
+                            value = values;
+                        }
+                    }
+                }
+                if (value != undefined) {
+                    if (!obj) obj = {};
+                    obj[elem.name] = (Array.isArray(value)) ? value : value.replace( rCRLF, "\r\n" );   
+                }
+            }
+        };
+        return obj;
+    }
+
+/***** ivan > *****/
 
     return page;
 }
