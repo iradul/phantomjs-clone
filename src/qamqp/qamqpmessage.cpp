@@ -109,6 +109,27 @@ QVariant QAmqpMessage::header(const QString &header, const QVariant &defaultValu
     return d->headers.value(header, defaultValue);
 }
 
+// ivan : add :
+QVariantMap QAmqpMessage::toMap() const
+{
+    QVariantMap map;
+    QMap<QString, QVariant> headers;
+    QHashIterator<QString, QVariant> it(d->headers);
+    while (it.hasNext()) {
+        it.next();
+        headers.insert(it.key(), it.value());
+    }
+
+    map.insert("deliveryTag", d->deliveryTag);
+    map.insert("exchangeName", d->exchangeName);
+    map.insert("routingKey", d->routingKey);
+    map.insert("redelivered", d->redelivered);
+    map.insert("payload", QString(d->payload));
+    map.insert("headers", headers);
+    
+    return map;
+}
+
 #if QT_VERSION < 0x050000
 bool QAmqpMessage::isDetached() const
 {

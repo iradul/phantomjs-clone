@@ -83,13 +83,16 @@ Q_SIGNALS:
 
 public Q_SLOTS:
     // AMQP Exchange
-    void declare(ExchangeType type = Direct,
+    // ivan : remove :
+    /*void declare(ExchangeType type = Direct,
+                 ExchangeOptions options = NoOptions,
+                 const QAmqpTable &args = QAmqpTable());*/
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void declare(const QString &type,
                  ExchangeOptions options = NoOptions,
                  const QAmqpTable &args = QAmqpTable());
-    void declare(const QString &type,
-                 ExchangeOptions options = NoOptions,
-                 const QAmqpTable &args = QAmqpTable());
-    void remove(int options = roIfUnused|roNoWait);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void remove(int options = roIfUnused|roNoWait);
 
     // AMQP Basic
     void publish(const QString &message, const QString &routingKey,
@@ -100,6 +103,11 @@ public Q_SLOTS:
                  int publishOptions = poNoOptions);
     void publish(const QByteArray &message, const QString &routingKey,
                  const QString &mimeType, const QAmqpTable &headers,
+                 const QAmqpMessage::PropertyHash &properties = QAmqpMessage::PropertyHash(),
+                 int publishOptions = poNoOptions);
+    // ivan: add :
+    Q_INVOKABLE void publish(const QByteArray &message, const QString &routingKey,
+                 const QString &mimeType, const QVariantMap &headers,
                  const QAmqpMessage::PropertyHash &properties = QAmqpMessage::PropertyHash(),
                  int publishOptions = poNoOptions);
 

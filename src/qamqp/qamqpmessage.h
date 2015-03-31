@@ -75,6 +75,8 @@ public:
     QString routingKey() const;
     QByteArray payload() const;
 
+    // ivan : add :
+    QVariantMap toMap() const;
 private:
     QSharedDataPointer<QAmqpMessagePrivate> d;
     friend class QAmqpQueuePrivate;

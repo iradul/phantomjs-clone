@@ -230,10 +230,11 @@ bool QAmqpExchange::isDeclared() const
     return d->declared;
 }
 
-void QAmqpExchange::declare(ExchangeType type, ExchangeOptions options, const QAmqpTable &args)
-{
-    declare(QAmqpExchangePrivate::typeToString(type), options, args);
-}
+// ivan: remove :
+// void QAmqpExchange::declare(ExchangeType type, ExchangeOptions options, const QAmqpTable &args)
+// {
+//     declare(QAmqpExchangePrivate::typeToString(type), options, args);
+// }
 
 void QAmqpExchange::declare(const QString &type, ExchangeOptions options, const QAmqpTable &args)
 {
@@ -273,6 +274,18 @@ void QAmqpExchange::publish(const QByteArray &message, const QString &routingKey
                             int publishOptions)
 {
     publish(message, routingKey, mimeType, QAmqpTable(), properties, publishOptions);
+}
+
+// ivan : add :
+void QAmqpExchange::publish(const QByteArray &message, const QString &routingKey,
+                            const QString &mimeType, const QVariantMap &headers,
+                            const QAmqpMessage::PropertyHash &properties, int publishOptions)
+{
+    QVariantHash hashHeaders;
+    for(QVariantMap::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+        hashHeaders.insert(it.key(), it.value());
+    }
+    publish(message, routingKey, mimeType, hashHeaders, properties, publishOptions);
 }
 
 void QAmqpExchange::publish(const QByteArray &message, const QString &routingKey,

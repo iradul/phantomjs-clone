@@ -641,12 +641,14 @@ void QAmqpClient::setPassword(const QString &password)
     d->setPassword(password);
 }
 
-QAmqpExchange *QAmqpClient::createExchange(int channelNumber)
+//ivan: QAmqpExchange *QAmqpClient::createExchange(int channelNumber)
+QObject *QAmqpClient::createExchange(int channelNumber)
 {
     return createExchange(QString(), channelNumber);
 }
 
-QAmqpExchange *QAmqpClient::createExchange(const QString &name, int channelNumber)
+//ivan: QAmqpExchange *QAmqpClient::createExchange(const QString &name, int channelNumber)
+QObject *QAmqpClient::createExchange(const QString &name, int channelNumber)
 {
     Q_D(QAmqpClient);
     QAmqpExchange *exchange = new QAmqpExchange(channelNumber, this);
@@ -660,12 +662,14 @@ QAmqpExchange *QAmqpClient::createExchange(const QString &name, int channelNumbe
     return exchange;
 }
 
-QAmqpQueue *QAmqpClient::createQueue(int channelNumber)
+//ivan: QAmqpQueue *QAmqpClient::createQueue(int channelNumber)
+QObject *QAmqpClient::createQueue(int channelNumber)
 {
     return createQueue(QString(), channelNumber);
 }
 
-QAmqpQueue *QAmqpClient::createQueue(const QString &name, int channelNumber)
+//ivan: QAmqpQueue *QAmqpClient::createQueue(const QString &name, int channelNumber)
+QObject *QAmqpClient::createQueue(const QString &name, int channelNumber)
 {
     Q_D(QAmqpClient);
     QAmqpQueue *queue = new QAmqpQueue(channelNumber, this);
@@ -772,6 +776,35 @@ QAbstractSocket::SocketError QAmqpClient::socketError() const
 {
     Q_D(const QAmqpClient);
     return d->socket->error();
+}
+
+// ivan: add :
+QString QAmqpClient::socketErrorString() const
+{
+    Q_D(const QAmqpClient);
+    switch (d->socket->error()) {
+        case QAbstractSocket::ConnectionRefusedError: return QString("ConnectionRefusedError : The connection was refused by the peer (or timed out).");
+        case QAbstractSocket::RemoteHostClosedError: return QString("RemoteHostClosedError : The remote host closed the connection.");
+        case QAbstractSocket::HostNotFoundError: return QString("HostNotFoundError : The host address was not found.");
+        case QAbstractSocket::SocketAccessError: return QString("SocketAccessError : The socket operation failed because the application lacked the required privileges.");
+        case QAbstractSocket::SocketResourceError: return QString("SocketResourceError : The local system ran out of resources (e.g., too many sockets).");
+        case QAbstractSocket::SocketTimeoutError: return QString("SocketTimeoutError : The socket operation timed out.");
+        case QAbstractSocket::DatagramTooLargeError: return QString("DatagramTooLargeError : The datagram was larger than the operating system's limit (which can be as low as 8192 bytes).");
+        case QAbstractSocket::NetworkError: return QString("NetworkError : An error occurred with the network (e.g., the network cable was accidentally plugged out).");
+        case QAbstractSocket::AddressInUseError: return QString("AddressInUseError : The address specified to QUdpSocket::bind() is already in use and was set to be exclusive.");
+        case QAbstractSocket::SocketAddressNotAvailableError: return QString("SocketAddressNotAvailableError : The address specified to QUdpSocket::bind() does not belong to the host.");
+        case QAbstractSocket::UnsupportedSocketOperationError: return QString("UnsupportedSocketOperationError : The requested socket operation is not supported by the local operating system (e.g., lack of IPv6 support).");
+        case QAbstractSocket::ProxyAuthenticationRequiredError: return QString("ProxyAuthenticationRequiredError : The socket is using a proxy, and the proxy requires authentication.");
+        case QAbstractSocket::SslHandshakeFailedError: return QString("SslHandshakeFailedError : The SSL/TLS handshake failed, so the connection was closed.");
+        case QAbstractSocket::UnfinishedSocketOperationError: return QString("UnfinishedSocketOperationError : Used by QAbstractSocketEngine only, The last operation attempted has not finished yet (still in progress in the background).");
+        case QAbstractSocket::ProxyConnectionRefusedError: return QString("ProxyConnectionRefusedError : Could not contact the proxy server because the connection to that server was denied");
+        case QAbstractSocket::ProxyConnectionClosedError: return QString("ProxyConnectionClosedError : The connection to the proxy server was closed unexpectedly (before the connection to the final peer was established)");
+        case QAbstractSocket::ProxyConnectionTimeoutError: return QString("ProxyConnectionTimeoutError : The connection to the proxy server timed out or the proxy server stopped responding in the authentication phase.");
+        case QAbstractSocket::ProxyNotFoundError: return QString("ProxyNotFoundError : The proxy address set with setProxy() (or the application proxy) was not found.");
+        case QAbstractSocket::ProxyProtocolError: return QString("ProxyProtocolError : The connection negotiation with the proxy server because the response from the proxy server could not be understood.");
+        case QAbstractSocket::UnknownSocketError: return QString("UnknownSocketError : An unidentified error occurred.");
+        default: return QString("");
+    }
 }
 
 QAMQP::Error QAmqpClient::error() const

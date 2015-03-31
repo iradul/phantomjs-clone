@@ -39,13 +39,17 @@ public:
     void setName(const QString &name);
 
     QAMQP::Error error() const;
-    QString errorString() const;
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE QString errorString() const;
 
-    qint32 prefetchSize() const;
-    qint16 prefetchCount() const;
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE qint32 prefetchSize() const;
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE qint16 prefetchCount() const;
 
     // AMQP Basic
-    void qos(qint16 prefetchCount, qint32 prefetchSize = 0);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void qos(qint16 prefetchCount, qint32 prefetchSize = 0);
 
 public Q_SLOTS:
     void close();

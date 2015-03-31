@@ -313,6 +313,18 @@ int QAmqpQueue::options() const
     return d->options;
 }
 
+// ivan : add :
+QVariantMap QAmqpQueue::message()
+{
+    if (this->isEmpty()) {
+        return QVariantMap();
+    }
+    else {
+        QAmqpMessage message = this->dequeue();
+        return message.toMap();
+    }
+}
+
 void QAmqpQueue::declare(int options)
 {
     Q_D(QAmqpQueue);

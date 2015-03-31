@@ -88,22 +88,37 @@ Q_SIGNALS:
 
 public Q_SLOTS:
     // AMQP Queue
-    void declare(int options = Durable|AutoDelete);
-    void bind(const QString &exchangeName, const QString &key);
-    void bind(QAmqpExchange *exchange, const QString &key);
-    void unbind(const QString &exchangeName, const QString &key);
-    void unbind(QAmqpExchange *exchange, const QString &key);
-    void purge();
-    void remove(int options = roIfUnused|roIfEmpty|roNoWait);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void declare(int options = Durable|AutoDelete);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void bind(const QString &exchangeName, const QString &key);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void bind(QAmqpExchange *exchange, const QString &key);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void unbind(const QString &exchangeName, const QString &key);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void unbind(QAmqpExchange *exchange, const QString &key);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void purge();
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void remove(int options = roIfUnused|roIfEmpty|roNoWait);
+
+    // ivan: add :
+    Q_INVOKABLE QVariantMap message();
 
     // AMQP Basic
-    bool consume(int options = NoOptions);
-    void get(bool noAck = true);
-    bool cancel(bool noWait = false);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE bool consume(int options = NoOptions);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void get(bool noAck = true);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE bool cancel(bool noWait = false);
     void ack(const QAmqpMessage &message);
-    void ack(qlonglong deliveryTag, bool multiple);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void ack(qlonglong deliveryTag, bool multiple);
     void reject(const QAmqpMessage &message, bool requeue);
-    void reject(qlonglong deliveryTag, bool requeue);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void reject(qlonglong deliveryTag, bool requeue);
 
 protected:
     // reimp Channel

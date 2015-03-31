@@ -69,7 +69,8 @@ public:
     bool autoReconnect() const;
     void setAutoReconnect(bool value);
 
-    bool isConnected() const;
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE bool isConnected() const;
 
     qint16 channelMax() const;
     void setChannelMax(qint16 channelMax);
@@ -84,23 +85,33 @@ public:
     QString customProperty(const QString &name) const;
 
     QAbstractSocket::SocketError socketError() const;
+    // ivan: add :
+    Q_INVOKABLE QString socketErrorString() const;
     QAMQP::Error error() const;
-    QString errorString() const;
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE QString errorString() const;
 
     QSslConfiguration sslConfiguration() const;
     void setSslConfiguration(const QSslConfiguration &config);
 
     // channels
-    QAmqpExchange *createExchange(int channelNumber = -1);
-    QAmqpExchange *createExchange(const QString &name, int channelNumber = -1);
+    // ivan: Q_INVOKABLE added : updated QObject return
+    Q_INVOKABLE QObject *createExchange(int channelNumber = -1);
+    // ivan: Q_INVOKABLE added : updated QObject return
+    Q_INVOKABLE QObject *createExchange(const QString &name, int channelNumber = -1);
 
-    QAmqpQueue *createQueue(int channelNumber = -1);
-    QAmqpQueue *createQueue(const QString &name, int channelNumber = -1);
+    // ivan: Q_INVOKABLE added : updated QObject return
+    Q_INVOKABLE QObject *createQueue(int channelNumber = -1);
+    // ivan: Q_INVOKABLE added : updated QObject return
+    Q_INVOKABLE QObject *createQueue(const QString &name, int channelNumber = -1);
 
     // methods
-    void connectToHost(const QString &uri = QString());
-    void connectToHost(const QHostAddress &address, quint16 port = AMQP_PORT);
-    void disconnectFromHost();
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void connectToHost(const QString &uri = QString());
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void connectToHost(const QHostAddress &address, quint16 port = AMQP_PORT);
+    // ivan: Q_INVOKABLE added :
+    Q_INVOKABLE void disconnectFromHost();
 
 Q_SIGNALS:
     void connected();
