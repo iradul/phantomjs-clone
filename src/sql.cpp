@@ -210,12 +210,11 @@ bool SQL::exec(const QString &query, QVariantList values)
 		return false;
 	}
 	m_finalized = false;
-	read();
-	return true;
+	return read(query.trimmed().startsWith("select", Qt::CaseInsensitive));
 }
 
 
-bool SQL::read()
+bool SQL::read(bool isSelect)
 {
 	if (!m_open) {
 		qDebug() << "SQL - read: can't read not opened db";
@@ -232,8 +231,8 @@ bool SQL::read()
 		setError(0, "Unable to fetch row");
 		return false;
 	}
-	qDebug() << "SQL - read: step sqlite3";
 	res = sqlite3_step(stmt);
+	qDebug() << "SQL - read: step sqlite3 " << res;
 	switch (res) {
 	case SQLITE_ROW:
 		nCols = sqlite3_column_count(stmt);
@@ -267,7 +266,7 @@ bool SQL::read()
 		return true;
 	case SQLITE_DONE:
 		sqlite3_reset(stmt);
-		return false;
+		return !isSelect;
 	case SQLITE_CONSTRAINT:
 	case SQLITE_ERROR:
 		res = sqlite3_reset(stmt);

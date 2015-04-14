@@ -94,7 +94,6 @@ class WebPage : public QObject, public QWebFrame::PrintCallback
     Q_PROPERTY(int historyCount READ historyCount)
     Q_PROPERTY(int waitTimeout READ waitTimeout WRITE setWaitTimeout)
     Q_PROPERTY(int waitInterval READ waitInterval WRITE setWaitInterval)
-    Q_PROPERTY(int globalTimeout READ globalTimeout WRITE setGlobalTimeout)
     Q_PROPERTY(int abortAllRequests READ abortAllRequests WRITE setAbortAllRequests)
 /***** ivan > *****/
 
@@ -570,7 +569,6 @@ signals:
 private:
     QEventLoop m_loop;
     ITimer m_timer;
-    QTimer m_globalTimeoutTimer;
     const QString *m_waitSelector;
     // this is holder for _waitForTestFunctionResult property (write only - seter setWaitForTestFunctionResult)
     // it holds returning value that signal _waitForTest should set as result of "wait for" testing 
@@ -578,7 +576,6 @@ private:
     bool m_waitForTestFunctionResult;
     int m_waitTimeout;
     int m_waitInterval;
-    int m_globalTimeout;
 private:
     bool waitForTestFunctionResult() const;
     void setWaitForTestFunctionResult(bool value);
@@ -590,13 +587,10 @@ private:
     void setWaitTimeout(int timeout);
     int waitInterval() const;
     void setWaitInterval(int interval);
-    int globalTimeout() const;
-    void setGlobalTimeout(int timeout);
     bool abortAllRequests() const;
     void setAbortAllRequests(bool abortAllRequests);
 private slots:
     void _waitForTestFunction();
-    void _globalTimeoutTestFunction();
 public:
     Q_INVOKABLE void _wait(int timeout);
     Q_INVOKABLE bool waitForPage(int loadstart_timeout=0);

@@ -76,6 +76,11 @@ Phantom::Phantom(QObject *parent)
     m_config.init(&args);
     // Apply debug configuration as early as possible
     Utils::printDebugMessages = m_config.printDebugMessages();
+/***** < ivan *****/
+    m_globalTimeoutTimer.setSingleShot(true);
+    connect(&m_globalTimeoutTimer, SIGNAL(timeout()), SLOT(_globalTimeoutTestFunction()));
+    m_globalTimeoutCallback = NULL;
+/***** ivan > *****/
 }
 
 void Phantom::init()
@@ -454,6 +459,12 @@ QObject* Phantom::createNet()
     return net;
 }
 
+QObject* Phantom::createEventLoopTimer()
+{
+    ITimer *timer = new ITimer();
+    return timer;
+}
+
 QVariantMap Phantom::detectLanguage(const QString &text, bool isHtml)
 {
     CLD2::Language language3[3];
@@ -476,6 +487,40 @@ QVariantMap Phantom::detectLanguage(const QString &text, bool isHtml)
     result.insert("accuracy", percent3[0]);
 
     return result;
+}
+
+int Phantom::globalTimeout() const
+{
+    return (m_globalTimeoutTimer.isActive()) ? m_globalTimeoutTimer.interval() / 1000 : 0;
+}
+
+void Phantom::setGlobalTimeout(int timeout)
+{
+    if (timeout <= 0) {
+        qDebug() << "Phantom - Global timeout stopped";
+        m_globalTimeoutTimer.stop();
+    }
+    else {
+        qDebug() << "Phantom - Global timeout started" << timeout;
+        m_globalTimeoutTimer.setInterval(timeout * 1000);
+        m_globalTimeoutTimer.start();
+    }
+}
+
+void Phantom::_globalTimeoutTestFunction()
+{
+    m_globalTimeoutCallback->call(QVariantList() << globalTimeout());
+    Terminal::instance()->cout(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " global timeout event");
+    Phantom::instance()->exit();
+}
+
+QObject* Phantom::_getGlobalTimeoutCallback() {
+    qDebug() << "PhantomCallbacks - getGlobalTimeoutCallback";
+
+    if (!m_globalTimeoutCallback) {
+        m_globalTimeoutCallback = new Callback(this);
+    }
+    return m_globalTimeoutCallback;
 }
 
 /***** ivan > *****/

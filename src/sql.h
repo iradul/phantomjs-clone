@@ -22,7 +22,7 @@ class SQL : public QObject
 		Q_INVOKABLE void close();
 		Q_INVOKABLE bool exec(const QString &query);
 		Q_INVOKABLE bool exec(const QString &query, QVariantList values);
-		Q_INVOKABLE bool read();
+		Q_INVOKABLE bool read(bool isSelect = true);
 	private:
 		void setError(sqlite3 *access, const QString& descr);
 		void finalize();

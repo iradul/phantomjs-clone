@@ -412,9 +412,6 @@ WebPage::WebPage(QObject *parent, const QUrl &baseUrl)
             SIGNAL(resourceTimeout(QVariant)));
 
 /***** < ivan *****/
-    m_globalTimeout = 0;
-    m_globalTimeoutTimer.setSingleShot(true);
-    connect(&m_globalTimeoutTimer, SIGNAL(timeout()), SLOT(_globalTimeoutTestFunction()));
     m_customWebPage->setViewportSize(QSize(800, 600));
     m_waitTimeout = 5000;
     m_waitInterval = 200;
@@ -1814,33 +1811,6 @@ int WebPage::waitInterval() const
 void WebPage::setWaitInterval(int interval)
 {
     m_waitInterval = interval;
-}
-
-int WebPage::globalTimeout() const
-{
-    return m_globalTimeout / 1000;
-}
-
-void WebPage::setGlobalTimeout(int timeout)
-{
-    m_globalTimeout = timeout * 1000;
-    qDebug() << "Global timeout -" << m_globalTimeout;
-    if (m_globalTimeout == 0) {
-        qDebug() << "Global timeout stopped";
-        m_globalTimeoutTimer.stop();
-    }
-    else {
-        qDebug() << "Global timeout started";
-        m_globalTimeoutTimer.setInterval(m_globalTimeout);
-        m_globalTimeoutTimer.start();
-    }
-    //QTimer::singleShot(m_globalTimeout, this, SLOT(_globalTimeoutTestFunction()));
-}
-
-void WebPage::_globalTimeoutTestFunction()
-{
-    Terminal::instance()->cout(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " global timeout event");
-    Phantom::instance()->exit();
 }
 
 bool WebPage::abortAllRequests() const

@@ -84,6 +84,7 @@ OTHER_FILES += \
     modules/net.js \
     modules/amqp.js \
     modules/sql.js \
+    modules/wait.js \
 # /***** ivan > *****/
     repl.js
 

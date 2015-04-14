@@ -34,6 +34,8 @@ class QAMQP_EXPORT QAmqpQueue : public QAmqpChannel, public QQueue<QAmqpMessage>
     Q_ENUMS(QueueOptions)
     Q_PROPERTY(int options READ options CONSTANT)
     Q_PROPERTY(QString consumerTag READ consumerTag WRITE setConsumerTag)
+    // ivan: added : (inherited from QQueue)
+    Q_PROPERTY(bool empty READ isEmpty)
     Q_ENUMS(QueueOption)
     Q_ENUMS(ConsumeOption)
     Q_ENUMS(RemoveOption)

@@ -1,6 +1,3 @@
-/*jslint sloppy: true, nomen: true */
-/*global exports:true,phantom:true */
-
 /*
  This is modified version of original x2js project http://code.google.com/p/x2js/
 
@@ -67,23 +64,23 @@ function escapeXmlChars(str) {
 }
 
 function unescapeXmlChars(str) {
-    return str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#x2F;/g, '\/')
+    return str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#x2F;/g, '\/');
 }
 
 function parseDOMChildren(node) {
     if (node.nodeType == DOMNodeTypes.DOCUMENT_NODE) {
-        var result = new Object;
+        var result = {};
         var child = node.firstChild;
         var childName = getNodeLocalName(child);
         result[childName] = parseDOMChildren(child);
         return result;
     }
     else
-    if (node.nodeType == DOMNodeTypes.ELEMENT_NODE && node.attributes.length == 0 && node.childNodes.length == 1 && node.childNodes[0].nodeType == DOMNodeTypes.TEXT_NODE) {
+    if (node.nodeType == DOMNodeTypes.ELEMENT_NODE && node.attributes.length === 0 && node.childNodes.length == 1 && node.childNodes[0].nodeType == DOMNodeTypes.TEXT_NODE) {
         return node.childNodes[0].nodeValue;
     }
     else if (node.nodeType == DOMNodeTypes.ELEMENT_NODE) {
-        var result = new Object;
+        var result = {};
         result.__cnt = 0;
 
         var nodeChildren = node.childNodes;
@@ -94,23 +91,23 @@ function parseDOMChildren(node) {
             var childName = getNodeLocalName(child);
 
             result.__cnt++;
-            if (result[childName] == null) {
+            if (result[childName] === null) {
                 result[childName] = parseDOMChildren(child);
                 result[childName + "_asArray"] = new Array(1);
                 result[childName + "_asArray"][0] = result[childName];
             }
             else {
-                if (result[childName] != null) {
+                if (result[childName] !== null) {
                     if (!(result[childName] instanceof Array)) {
                         var tmpObj = result[childName];
-                        result[childName] = new Array();
+                        result[childName] = [];
                         result[childName][0] = tmpObj;
 
                         result[childName + "_asArray"] = result[childName];
                     }
                 }
                 var aridx = 0;
-                while (result[childName][aridx] != null) aridx++;
+                while (result[childName][aridx] !== null) aridx++;
                 (result[childName])[aridx] = parseDOMChildren(child);
             }
         }
@@ -124,32 +121,32 @@ function parseDOMChildren(node) {
 
         // Node namespace prefix
         var nodePrefix = getNodePrefix(node);
-        if (nodePrefix != null && nodePrefix != "") {
+        if (nodePrefix !== null && nodePrefix !== "") {
             result.__cnt++;
             result.__prefix = nodePrefix;
         }
 
-        if (result.__cnt == 1 && result["#text"] != null) {
+        if (result.__cnt == 1 && result["#text"] !== null) {
             result = result["#text"];
         }
 
-        if (result["#text"] != null) {
+        if (result["#text"] !== null) {
             result.__text = result["#text"];
             if (escapeMode)
-                result.__text = unescapeXmlChars(result.__text)
+                result.__text = unescapeXmlChars(result.__text);
             delete result["#text"];
             delete result["#text_asArray"];
         }
-        if (result["#cdata-section"] != null) {
+        if (result["#cdata-section"] !== null) {
             result.__cdata = result["#cdata-section"];
             delete result["#cdata-section"];
             delete result["#cdata-section_asArray"];
         }
 
-        if (result.__text != null || result.__cdata != null) {
+        if (result.__text !== null || result.__cdata !== null) {
             result.toString = function () {
-                return (exports.__text != null ? exports.__text : '') + (exports.__cdata != null ? exports.__cdata : '');
-            }
+                return (exports.__text !== null ? exports.__text : '') + (exports.__cdata !== null ? exports.__cdata : '');
+            };
         }
         return result;
     }
@@ -160,8 +157,8 @@ function parseDOMChildren(node) {
 }
 
 function startTag(jsonObj, element, attrList, closed) {
-    var resultStr = "<" + ((jsonObj != null && jsonObj.__prefix != null) ? (jsonObj.__prefix + ":") : "") + element;
-    if (attrList != null) {
+    var resultStr = "<" + ((jsonObj !== null && jsonObj.__prefix !== null) ? (jsonObj.__prefix + ":") : "") + element;
+    if (attrList !== null) {
         for (var aidx = 0; aidx < attrList.length; aidx++) {
             var attrName = attrList[aidx];
             var attrVal = jsonObj[attrName];
@@ -176,7 +173,7 @@ function startTag(jsonObj, element, attrList, closed) {
 }
 
 function endTag(jsonObj, elementName) {
-    return "</" + (jsonObj.__prefix != null ? (jsonObj.__prefix + ":") : "") + elementName + ">";
+    return "</" + (jsonObj.__prefix !== null ? (jsonObj.__prefix + ":") : "") + elementName + ">";
 }
 
 function endsWith(str, suffix) {
@@ -185,7 +182,7 @@ function endsWith(str, suffix) {
 
 function jsonXmlSpecialElem(jsonObj, jsonObjField) {
     if (endsWith(jsonObjField.toString(), ("_asArray"))
-        || jsonObjField.toString().indexOf("_") == 0
+        || jsonObjField.toString().indexOf("_") === 0
         || (jsonObj[jsonObjField] instanceof Function))
         return true;
     else
@@ -208,7 +205,7 @@ function parseJSONAttributes(jsonObj) {
     var attrList = [];
     if (jsonObj instanceof Object) {
         for (var ait in jsonObj) {
-            if (ait.toString().indexOf("__") == -1 && ait.toString().indexOf("_") == 0) {
+            if (ait.toString().indexOf("__") == -1 && ait.toString().indexOf("_") === 0) {
                 attrList.push(ait);
             }
         }
@@ -219,27 +216,27 @@ function parseJSONAttributes(jsonObj) {
 function parseJSONTextAttrs(jsonTxtObj) {
     var result = "";
 
-    if (jsonTxtObj.__cdata != null) {
+    if (jsonTxtObj.__cdata !== null) {
         result += "<![CDATA[" + jsonTxtObj.__cdata + "]]>";
     }
 
-    if (jsonTxtObj.__text != null) {
+    if (jsonTxtObj.__text !== null) {
         if (escapeMode)
             result += escapeXmlChars(jsonTxtObj.__text);
         else
             result += jsonTxtObj.__text;
     }
-    return result
+    return result;
 }
 
 function parseJSONTextObject(jsonTxtObj) {
     var result = "";
 
     if (jsonTxtObj instanceof Object) {
-        result += parseJSONTextAttrs(jsonTxtObj)
+        result += parseJSONTextAttrs(jsonTxtObj);
     }
     else
-    if (jsonTxtObj != null) {
+    if (jsonTxtObj !== null) {
         if (escapeMode)
             result += escapeXmlChars(jsonTxtObj);
         else
@@ -251,7 +248,7 @@ function parseJSONTextObject(jsonTxtObj) {
 
 function parseJSONArray(jsonArrRoot, jsonArrObj, attrList) {
     var result = "";
-    if (jsonArrRoot.length == 0) {
+    if (jsonArrRoot.length === 0) {
         result += startTag(jsonArrRoot, jsonArrObj, attrList, true);
     }
     else {
@@ -277,20 +274,20 @@ function parseJSONObject(jsonObj) {
 
             var subObj = jsonObj[it];
 
-            var attrList = parseJSONAttributes(subObj)
+            var attrList = parseJSONAttributes(subObj);
 
-            if (subObj == null || subObj == undefined) {
-                result += startTag(subObj, it, attrList, true)
+            if (subObj === null || subObj === undefined) {
+                result += startTag(subObj, it, attrList, true);
             }
             else
             if (subObj instanceof Object) {
 
                 if (subObj instanceof Array) {
-                    result += parseJSONArray(subObj, it, attrList)
+                    result += parseJSONArray(subObj, it, attrList);
                 }
                 else {
                     var subObjElementsCnt = jsonXmlElemCount(subObj);
-                    if (subObjElementsCnt > 0 || subObj.__text != null || subObj.__cdata != null) {
+                    if (subObjElementsCnt > 0 || subObj.__text !== null || subObj.__cdata !== null) {
                         result += startTag(subObj, it, attrList, false);
                         result += parseJSONObject(subObj);
                         result += endTag(subObj, it);
@@ -317,37 +314,38 @@ exports.parseXmlString = function (xmlDocStr) {
     var parser = new window.DOMParser();
     xmlDoc = parser.parseFromString(xmlDocStr, "text/xml");
     return xmlDoc;
-}
+};
 
 exports.element2json = function (xmlDoc) {
     return parseDOMChildren(xmlDoc);
-}
+};
 
 exports.xml2json = function (xmlDocStr) {
     var xmlDoc = exports.parseXmlString(xmlDocStr);
     return exports.element2json(xmlDoc);
-}
+};
 
 exports.json2xml = function (jsonObj, root) {
-    if (root == undefined) root = 'root';
+    if (root === undefined) root = 'root';
     if (root) {
         return '<' + root + '>' + parseJSONObject(jsonObj) + '</' + root + '>';
     }
     else {
         return parseJSONObject(jsonObj);
     }
-}
+};
 
-exports.__defineSetter__('escape', function (enabled) {
-    escapeMode = enabled;
-});
-
-exports.__defineGetter__('escape', function() {
-    return escapeMode;
+Object.defineProperty(exports, "escape", {
+    get: function() {
+        return escapeMode;
+    },
+    set: function (enabled) {
+        escapeMode = enabled;
+    },
 });
 
 exports.base64 = function (str) {
-    if (str === undefined || str == null) {
+    if (str === undefined || str === null) {
         return "";
     }
     var BASE64_ENCODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -376,7 +374,7 @@ exports.base64 = function (str) {
         out += BASE64_ENCODE_CHARS.charAt(c3 & 0x3F);
     }
     return out;
-}
+};
 
 exports.json2base64 = function (jsonObj) {
     var obj = (typeof(jsonObj) === 'object') ? jsonObj : JSON.parse(jsonObj);
@@ -404,6 +402,6 @@ exports.json2base64 = function (jsonObj) {
     else if (t === 'string') {
         return exports.base64(obj);
     }
-}
+};
 
 /***** ivan > *****/

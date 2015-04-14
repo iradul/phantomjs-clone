@@ -108,6 +108,8 @@ QString Net::_fetchUrl(const QString &url, const QString &method, const QVariant
             m_reply = m_net->put(request, body);
         else if (method == "DELETE")
             m_reply = m_net->deleteResource(request);
+        else if (method == "HEAD")
+            m_reply = m_net->head(request);
         else
             m_reply = m_net->get(request);
     }

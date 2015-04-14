@@ -16,6 +16,7 @@
         <file>modules/amqp.js</file>
         <file>modules/net.js</file>
         <file>modules/utils.js</file>
+        <file>modules/wait.js</file>
 <!-- /***** ivan > *****/ -->
         <file>repl.js</file>
     </qresource>

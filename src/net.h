@@ -8,7 +8,6 @@
 #include <QTimer>
 #include <QMap>
 #include <QVariantMap>
-#include "itimer.h"
 
 class Phantom;
 

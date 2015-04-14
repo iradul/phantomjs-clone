@@ -43,15 +43,15 @@ exports.fetch = function (url, method, data, headers, encode, fileEncoding) {
         for (var p in arguments[0]) {
             config[p] = arguments[0][p];
         }
-        var method = (config.method || 'GET').toUpperCase(),
-            url = config.url;
+        method = (config.method || 'GET').toUpperCase();
+        url = config.url;
         delete config.url;
         delete config.method;
         return this._fetchUrl(url, method, config);
     }
     var postObj = {};
     encode = (encode === undefined || encode) ? true : false;
-    if (typeof method !== "string" || ["GET", "POST", "PUT", "DELETE"].indexOf(method.toUpperCase()) === -1) {
+    if (typeof method !== "string" || ["GET", "POST", "PUT", "DELETE", "HEAD"].indexOf(method.toUpperCase()) === -1) {
         method = "GET";
     } else {
         method = method.toUpperCase();

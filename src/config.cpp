@@ -83,6 +83,9 @@ static const struct QCommandLineConfigEntry flags[] =
     { QCommandLine::Switch, 'w', "wd", "Equivalent to '--webdriver' option above", QCommandLine::Optional },
     { QCommandLine::Switch, 'h', "help", "Shows this message and quits", QCommandLine::Optional },
     { QCommandLine::Switch, 'v', "version", "Prints out PhantomJS version", QCommandLine::Optional },
+/***** < ivan *****/
+    { QCommandLine::Switch, 'r', "rdp", "Starts the script in a debug harness and listens on the specified port", QCommandLine::Optional },
+/***** ivan > *****/
     QCOMMANDLINE_CONFIG_ENTRY_END
 };
 
@@ -665,6 +668,12 @@ void Config::handleSwitch(const QString &sw)
     if (sw == "wd") {
         setWebdriver(DEFAULT_WEBDRIVER_CONFIG);
     }
+/***** < ivan *****/
+    if (sw == "rdp") {
+        setDebug(true);
+        setRemoteDebugPort(-1);
+    }
+/***** ivan > *****/
 }
 
 void Config::handleOption(const QString &option, const QVariant &value)

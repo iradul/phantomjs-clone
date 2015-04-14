@@ -39,6 +39,10 @@
 #include "system.h"
 #include "childprocess.h"
 #include "cookiejar.h"
+/***** < ivan *****/
+#include <QTimer>
+#include "callback.h"
+/***** ivan > *****/
 
 class WebPage;
 class CustomPage;
@@ -57,6 +61,7 @@ class Phantom : public QObject
     Q_PROPERTY(bool webdriverMode READ webdriverMode)
 /***** < ivan *****/
     Q_PROPERTY(QString remoteLibraryPath READ remoteLibraryPath WRITE setRemoteLibraryPath)
+    Q_PROPERTY(int globalTimeout READ globalTimeout WRITE setGlobalTimeout)
 /***** ivan > *****/
 
 private:
@@ -106,6 +111,8 @@ public:
 /***** < ivan *****/
     QString remoteLibraryPath() const;
     void setRemoteLibraryPath(const QString &remoteLibraryPath);
+    int globalTimeout() const;
+    void setGlobalTimeout(int timeout);
 /***** ivan > *****/
 
 public slots:
@@ -116,7 +123,9 @@ public slots:
     QObject *createAMQPClient();
     QObject *createSQL();
     QObject *createNet();
+    QObject *createEventLoopTimer();
     QVariantMap detectLanguage(const QString &text, bool isHtml = false);
+    QObject *_getGlobalTimeoutCallback();
 /***** ivan > *****/
     QObject *createFilesystem();
     QObject *createSystem();
@@ -194,6 +203,9 @@ private slots:
     void printConsoleMessage(const QString &msg);
 
     void onInitialized();
+/***** < ivan *****/
+    void _globalTimeoutTestFunction();
+/***** ivan > *****/
 
 private:
     void doExit(int code);
@@ -211,6 +223,10 @@ private:
     QList<QPointer<WebServer> > m_servers;
     Config m_config;
     CookieJar *m_defaultCookieJar;
+/***** < ivan *****/
+    QTimer m_globalTimeoutTimer;
+    Callback *m_globalTimeoutCallback;
+/***** ivan > *****/
 
     friend class CustomPage;
 };
