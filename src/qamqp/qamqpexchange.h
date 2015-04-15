@@ -106,7 +106,7 @@ public Q_SLOTS:
                  const QAmqpMessage::PropertyHash &properties = QAmqpMessage::PropertyHash(),
                  int publishOptions = poNoOptions);
     // ivan: add :
-    Q_INVOKABLE void publish(const QByteArray &message, const QString &routingKey,
+    Q_INVOKABLE void publish(const QString &message, const QString &routingKey,
                  const QString &mimeType, const QVariantMap &headers,
                  const QAmqpMessage::PropertyHash &properties = QAmqpMessage::PropertyHash(),
                  int publishOptions = poNoOptions);

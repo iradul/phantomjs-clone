@@ -277,7 +277,7 @@ void QAmqpExchange::publish(const QByteArray &message, const QString &routingKey
 }
 
 // ivan : add :
-void QAmqpExchange::publish(const QByteArray &message, const QString &routingKey,
+void QAmqpExchange::publish(const QString &message, const QString &routingKey,
                             const QString &mimeType, const QVariantMap &headers,
                             const QAmqpMessage::PropertyHash &properties, int publishOptions)
 {
@@ -285,7 +285,7 @@ void QAmqpExchange::publish(const QByteArray &message, const QString &routingKey
     for(QVariantMap::const_iterator it = headers.begin(); it != headers.end(); ++it) {
         hashHeaders.insert(it.key(), it.value());
     }
-    publish(message, routingKey, mimeType, hashHeaders, properties, publishOptions);
+    publish(message.toUtf8(), routingKey, mimeType, hashHeaders, properties, publishOptions);
 }
 
 void QAmqpExchange::publish(const QByteArray &message, const QString &routingKey,
