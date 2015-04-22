@@ -107,7 +107,7 @@ function definePageSignalHandler(page, handlers, handlerName, signalName) {
                 // Store the new handler for reference
                 handlers[handlerName] = {
                     callback: f
-                }
+                };
                 this[signalName].connect(f);
             }
         },
@@ -283,7 +283,7 @@ function decorateNewPage(opts, page) {
             this._onPageOpenFinished = function() {
                 thisPage._onPageOpenFinished = null; //< Disconnect callback (should fire only once)
                 arg1.apply(thisPage, arguments);     //< Invoke the actual callback
-            }
+            };
             this.openUrl(url, 'get', this.settings);
             return;
         } else if (arguments.length === 2) {
@@ -293,7 +293,7 @@ function decorateNewPage(opts, page) {
             this._onPageOpenFinished = function() {
                 thisPage._onPageOpenFinished = null; //< Disconnect callback (should fire only once)
                 arg2.apply(thisPage, arguments);     //< Invoke the actual callback
-            }
+            };
             this.openUrl(url, arg1, this.settings);
             return;
         } else if (arguments.length === 3) {
@@ -306,7 +306,7 @@ function decorateNewPage(opts, page) {
             this._onPageOpenFinished = function() {
                 thisPage._onPageOpenFinished = null; //< Disconnect callback (should fire only once)
                 arg3.apply(thisPage, arguments);     //< Invoke the actual callback
-            }
+            };
             this.openUrl(url, {
                 operation: arg1,
                 data: arg2
@@ -316,7 +316,7 @@ function decorateNewPage(opts, page) {
             this._onPageOpenFinished = function() {
                 thisPage._onPageOpenFinished = null; //< Disconnect callback (should fire only once)
                 arg4.apply(thisPage, arguments);     //< Invoke the actual callback
-            }
+            };
             this.openUrl(url, {
                 operation: arg1,
                 data: arg2,
@@ -370,10 +370,10 @@ function decorateNewPage(opts, page) {
             switch (argType) {
             case "object":      //< for type "object"
             case "array":       //< for type "array"
-                str += JSON.stringify(arg) + ","
+                str += JSON.stringify(arg) + ",";
                 break;
             case "date":        //< for type "date"
-                str += "new Date(" + JSON.stringify(arg) + "),"
+                str += "new Date(" + JSON.stringify(arg) + "),";
                 break;
             case "string":      //< for type "string"
                 str += quoteString(arg) + ',';
@@ -397,8 +397,8 @@ function decorateNewPage(opts, page) {
      */
     page.evaluateAsync = function (func, timeMs, args) {
         // Remove the first 2 arguments because we are going to consume them
-        var args = Array.prototype.slice.call(arguments, 2),
-            numArgsToAppend = args.length,
+        args = Array.prototype.slice.call(arguments, 2);
+        var numArgsToAppend = args.length,
             funcTimeoutWrapper;
 
         if (!(func instanceof Function || typeof func === 'string' || func instanceof String)) {
@@ -1686,15 +1686,29 @@ function decorateNewPage(opts, page) {
 
     page.capture = function (targetFile, e, options) {
         var previousClipRect, clipRect;
-        clipRect = (isElement(e)) ? e.getBoundingClientRect() : e;
+        if (isElement(e)) {
+            clipRect = e.getBoundingClientRect();
+        }
+        else if (!e) {
+            var vps = page.viewportSize;
+            clipRect = {
+                top: 0,
+                left: 0,
+                height: vps.height,
+                width: vps.width
+            };
+        }
+        else {
+            clipRect = e;
+        }
         previousClipRect = this.clipRect;
         this.clipRect = clipRect;
 
-        this.render(targetFile, options);
+        var result = this.render(targetFile, options);
         if (previousClipRect) {
             this.clipRect = previousClipRect;
         }
-        return this;
+        return result;
     };
 
     page.find = function () {
@@ -2229,10 +2243,13 @@ function decorateNewPage(opts, page) {
                 elem = arguments[0];
             }
             if (isElement(elem)) {
+                var displayNone = elem.style.display == "none"; // if display=none then getBoundingClientRect() returns ZERO!
+                if (displayNone) elem.style.display = "block";
                 var pos = elem.getBoundingClientRect(),
                     currentScroll = this.scrollPosition;
                 x = pos.left + currentScroll.left;
-                y = pos.top + currentScroll.top;              
+                y = pos.top + currentScroll.top; 
+                if (displayNone) elem.style.display = "none";
             }
         }
         else if (arguments.length == 2) {
@@ -2248,11 +2265,13 @@ function decorateNewPage(opts, page) {
     }
 
     page.scrollToTop = function() {
-        return this.scrollTo(0,0);
+        return this.scrollTo(this.scrollPosition.left,0);
     }
 
     page.scrollToBottom = function() {
-        return this.scrollTo(0, this.height);
+        var top = this.height - this.viewportSize.height;
+        if (top < 0) top = 0;
+        return this.scrollTo(this.scrollPosition.left, top);
     }
 
     page.serializeForm = function() {
