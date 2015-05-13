@@ -95,6 +95,7 @@ class WebPage : public QObject, public QWebFrame::PrintCallback
     Q_PROPERTY(int waitTimeout READ waitTimeout WRITE setWaitTimeout)
     Q_PROPERTY(int waitInterval READ waitInterval WRITE setWaitInterval)
     Q_PROPERTY(int abortAllRequests READ abortAllRequests WRITE setAbortAllRequests)
+    Q_PROPERTY(QString frameRequestedUrl READ frameRequestedUrl)
 /***** ivan > *****/
 
 public:
@@ -589,6 +590,7 @@ private:
     void setWaitInterval(int interval);
     bool abortAllRequests() const;
     void setAbortAllRequests(bool abortAllRequests);
+    QString frameRequestedUrl() const;
 private slots:
     void _waitForTestFunction();
 public:

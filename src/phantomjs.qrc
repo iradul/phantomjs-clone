@@ -11,6 +11,7 @@
         <file>modules/child_process.js</file>
         <file>modules/cookiejar.js</file>
 <!-- /***** < ivan *****/ -->
+        <file>modules/smtp.js</file>
         <file>modules/converter.js</file>
         <file>modules/sql.js</file>
         <file>modules/amqp.js</file>

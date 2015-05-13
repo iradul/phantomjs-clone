@@ -120,6 +120,7 @@ public slots:
     QObject *createWebPage();
     QObject *createWebServer();
 /***** < ivan *****/
+    QObject *createSMTP(const QString &usn, const QString &psw, const QString &host);
     QObject *createAMQPClient();
     QObject *createSQL();
     QObject *createNet();

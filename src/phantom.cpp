@@ -51,6 +51,7 @@
 #include "cookiejar.h"
 #include "childprocess.h"
 /***** < ivan *****/
+#include "smtp.h"
 #include "qamqp/qamqpclient.h"
 #include "sql.h"
 #include "net.h"
@@ -440,6 +441,12 @@ void Phantom::setProxy(const QString &ip, const qint64 &port, const QString &pro
 }
 
 /***** < ivan *****/
+
+QObject* Phantom::createSMTP(const QString &usn, const QString &psw, const QString &host)
+{
+    Smtp *smtp = new Smtp(usn, psw, host);
+    return smtp;
+}
 
 QObject* Phantom::createAMQPClient()
 {

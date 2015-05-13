@@ -1682,6 +1682,11 @@ void WebPage::clearMemoryCache()
 }
 
 /***** < ivan *****/
+QString WebPage::frameRequestedUrl() const
+{
+    return m_currentFrame->requestedUrl().toString();
+}
+
 QString WebPage::resolveUrl(const QString &href) const
 {
     return (!href.isEmpty()) ? m_mainFrame->baseUrl().resolved(QUrl(href)).toString() : QString();
