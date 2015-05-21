@@ -15,10 +15,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  
 #include <QtNetwork/QAbstractSocket>
 #include <QtNetwork/QSslSocket>
-#include < QString >
-#include < QTextStream >
-#include < QDebug >
-#include < QByteArray >
+#include <QString>
+#include <QTextStream>
+#include <QDebug>
+#include <QByteArray>
 #include "terminal.h"
  
  
