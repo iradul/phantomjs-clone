@@ -2340,48 +2340,35 @@ function decorateNewPage(opts, page) {
         return obj;
     }
 
-    function switchToThisFrame(page, selframe, selcheck) {
-        var i;
-        if (page.exists(selframe)) {
-            var frameElement = page.one(selframe),
-                frames = page.all('iframe,frame');
-            for (i = 0; i < frames.length; i++) { // loop trought all frame nodes on current frame and try to find selframe element index
-                if (frames[i] === frameElement) { // we got it, it's in "i"
-                    if (page.switchToFrame(i)) { // switch to that "i"th frame
-                        if (!selcheck || page.exists(selcheck)) { // also test frame selector if it extists
-                            return true;
-                        }
-                    }
+    function switchToDocFrame(page, doc) {
+        if (page.document === doc) {
+            return true;
+        }
+
+        for (var i = 0; i < page.framesCount; i++) { // loop trought all frame nodes on current frame and try to find selframe element index
+            if (page.switchToFrame(i)) { // switch to that "i"th frame
+                if (page.document === doc) {
+                    return true;
+                }
+                else {
                     page.switchToParentFrame(); // we need to undo switch because it's not the right frame
                 }
             }
         }
 
-        // frame was not found so we need to search in nested frames
-        for (i = 0; i < page.framesCount; i++) {
-            if (page.switchToFrame(i)) {
-                if (switchToThisFrame(page, selframe, selcheck)) {
-                    return true;
-                }
-                page.switchToParentFrame(); 
-            }
-        }
         return false;
     }
 
-    page.switchToSelectorFrame = function(selframe, selcheck) {
-        if (arguments.length === 1 && page.switchToFrame(selframe)) {
-            return true;
+    // f: can be name or index or selector that points to the iframe element
+    page.switchToThisFrame = function (f) {
+        var frame = this.one(f);
+        if (frame) {
+            return switchToDocFrame(this, frame.contentDocument);
         }
         else {
-            if (switchToThisFrame(page, selframe, selcheck)) {
-                return true;
-            }
-            else {
-                this.switchToMainFrame(); // make sure that we end up on main frame if we can't find selframe
-                return false;
-            }
+            return this.switchToFrame(f);
         }
+        
     }
 
 /***** ivan > *****/
