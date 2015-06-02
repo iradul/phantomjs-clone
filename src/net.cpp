@@ -12,6 +12,7 @@
 #include <QFile>
 #include <QRegExp>
 #include <QWebPage>
+#include <QHostInfo>
 
 
 #include "net.h"
@@ -445,6 +446,11 @@ QString Net::localIP() const
          return address.toString();
     }
     return "";
+}
+
+QString Net::localHostName() const
+{
+    return QHostInfo::localHostName();
 }
 
 int Net::timeout() const

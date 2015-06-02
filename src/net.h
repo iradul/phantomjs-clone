@@ -18,6 +18,7 @@ class Net : public QObject
     Q_PROPERTY(int timeout READ timeout WRITE setTimeout)
     Q_PROPERTY(QVariantMap fetchResult READ fetchResult)
     Q_PROPERTY(QString localIP READ localIP)
+    Q_PROPERTY(QString localHostName READ localHostName)
     Q_PROPERTY(QString userAgent READ userAgent WRITE setUserAgent)
 public:
     Net(QObject *parent);
@@ -36,6 +37,7 @@ private:
     int timeout() const;
     void setTimeout(int timeout);
     QString localIP() const;
+    QString localHostName() const;
     QString userAgent() const;
     void setUserAgent(const QString &agent);
     QVariantMap fetchResult() const;

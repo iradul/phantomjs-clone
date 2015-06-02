@@ -36,7 +36,7 @@
 #define PHANTOMJS_VERSION_MINOR     0
 #define PHANTOMJS_VERSION_PATCH     0
 /***** < ivan *****/
-#define PHANTOMJS_VERSION_STRING    "2.0.0 (SYNC 1.1.5)"
+#define PHANTOMJS_VERSION_STRING    "2.0.0 (SYNC 1.1.6)"
 /***** ivan > *****/
 
 #define HTTP_HEADER_CONTENT_LENGTH      "content-length"
