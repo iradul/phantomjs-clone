@@ -2361,7 +2361,7 @@ function decorateNewPage(opts, page) {
 
     // f: can be name or index or selector that points to the iframe element
     page.switchToThisFrame = function (f) {
-        var frame = this.one(f);
+        var frame = isElement(f) ? f : this.one(f);
         if (frame) {
             return switchToDocFrame(this, frame.contentDocument);
         }
