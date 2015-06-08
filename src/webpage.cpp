@@ -64,6 +64,9 @@
 #include "terminal.h"
 #include <QNetworkInterface>
 #include <QFile>
+#ifdef Q_OS_WIN32
+#include <QWebView>
+#endif
 /***** ivan > *****/
 
 #include "phantom.h"
@@ -1826,6 +1829,19 @@ bool WebPage::abortAllRequests() const
 void WebPage::setAbortAllRequests(bool abortAllRequests)
 {
     m_networkAccessManager->abortAllRequests = abortAllRequests;
+}
+
+void WebPage::showGUI(bool scrollbars) {
+#ifdef Q_OS_WIN32
+    m_customWebPage->settings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
+    if (scrollbars) {
+        m_mainFrame->setScrollBarPolicy(Qt::Horizontal, Qt::ScrollBarAsNeeded);
+        m_mainFrame->setScrollBarPolicy(Qt::Vertical, Qt::ScrollBarAsNeeded);
+    }
+    QWebView* view = new QWebView();
+    view->show();
+    view->setPage(m_customWebPage);
+#endif
 }
 
 /***** ivan > *****/
