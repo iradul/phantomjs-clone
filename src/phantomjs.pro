@@ -25,6 +25,19 @@ RESOURCES = phantomjs.qrc \
                  qt/qtwebkit/Source/WebCore/generated/InspectorBackendCommands.qrc
 }
 
+# /***** < ivan *****/
+win32: {
+  HEADERS += webbrowser_win/webbrowser.h
+  SOURCES += webbrowser_win/webbrowser.cpp
+  INCLUDEPATH += webbrowser_win
+}
+!win32: {
+  HEADERS += webbrowser_others/webbrowser.h
+  SOURCES += webbrowser_others/webbrowser.cpp
+  INCLUDEPATH += webbrowser_others
+}
+# /***** ivan > *****/
+
 HEADERS += \
 # /***** < ivan *****/
     net.h \

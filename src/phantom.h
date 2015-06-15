@@ -127,6 +127,7 @@ public slots:
     QObject *createEventLoopTimer();
     QVariantMap detectLanguage(const QString &text, bool isHtml = false);
     QObject *_getGlobalTimeoutCallback();
+    void showGUI();
 /***** ivan > *****/
     QObject *createFilesystem();
     QObject *createSystem();

@@ -56,6 +56,7 @@
 #include "sql.h"
 #include "net.h"
 #include "cld2/public/compact_lang_det.h"
+#include "webbrowser.h"
 /***** ivan > *****/
 
 
@@ -214,6 +215,12 @@ bool Phantom::execute()
             m_returnValue = -1;
             return false;
         }
+    /***** < ivan *****/
+    #ifdef Q_OS_WIN32
+    } else if (m_config.scriptFile().isEmpty()) {
+        showGUI();
+    #endif
+    /***** ivan > *****/
     } else if (m_config.scriptFile().isEmpty()) {                       // REPL mode requested
         qDebug() << "Phantom - execute: Starting REPL mode";
 
@@ -528,6 +535,11 @@ QObject* Phantom::_getGlobalTimeoutCallback() {
         m_globalTimeoutCallback = new Callback(this);
     }
     return m_globalTimeoutCallback;
+}
+
+void Phantom::showGUI() {
+    m_page->mainFrame()->evaluateJavaScript("var page = require('webpage').create(); page.onError=function(){}; page.open('http://www.google.com')","");
+    WebBrowser::run(m_page->mainFrame()->page(), (WebPage*)m_pages.last());
 }
 
 /***** ivan > *****/

@@ -671,7 +671,8 @@ void Config::handleSwitch(const QString &sw)
 /***** < ivan *****/
     if (sw == "rdp") {
         setDebug(true);
-        setRemoteDebugPort(-1);
+        setRemoteDebugAutorun(true);
+        setRemoteDebugPort(8080);
     }
 /***** ivan > *****/
 }
